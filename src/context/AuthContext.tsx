@@ -6,6 +6,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { Platform } from "react-native";
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
+import { router } from "expo-router";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -17,7 +18,7 @@ interface AuthContextType {
   isModerator: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  devSwitchUser: (userId: string) => Promise<void>;
+  devSwitchUser: (email: string) => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
   domainError: string | null;
   clearDomainError: () => void;
@@ -37,10 +38,37 @@ export const AuthContext = createContext<AuthContextType>({
   clearDomainError: () => {},
 });
 
-const SEED_PROFILES: Record<string, string> = {
-  arjun: "2205001@kiit.ac.in",
-  sneha: "2205002@kiit.ac.in",
-  ravi: "2205003@kiit.ac.in",
+const DEV_MOCK_PROFILES: Record<string, Profile> = {
+  "2205001@kiit.ac.in": {
+    id: "11111111-1111-1111-1111-111111111111",
+    email: "2205001@kiit.ac.in",
+    full_name: "Arjun Patel",
+    avatar_url: null,
+    campus_location: "Campus 6",
+    whatsapp_number: "919876543210",
+    is_moderator: false,
+    created_at: new Date().toISOString(),
+  },
+  "2205002@kiit.ac.in": {
+    id: "22222222-2222-2222-2222-222222222222",
+    email: "2205002@kiit.ac.in",
+    full_name: "Sneha Mohanty",
+    avatar_url: null,
+    campus_location: "Campus 15",
+    whatsapp_number: "919876543211",
+    is_moderator: false,
+    created_at: new Date().toISOString(),
+  },
+  "2205003@kiit.ac.in": {
+    id: "33333333-3333-3333-3333-333333333333",
+    email: "2205003@kiit.ac.in",
+    full_name: "Ravi Kumar",
+    avatar_url: null,
+    campus_location: "Campus 6",
+    whatsapp_number: "919876543212",
+    is_moderator: true,
+    created_at: new Date().toISOString(),
+  },
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -104,9 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
-        // If the error is not found, maybe it's because of the KIIT gate on the trigger
         if (error.code === 'PGRST116') {
-          // No profile found could mean trigger failed due to wrong email domain
           console.warn('Profile not found for user, possibly rejected by trigger');
         } else {
           console.error("Error fetching profile:", error);
@@ -136,7 +162,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         options: {
           redirectTo: redirectUrl,
           queryParams: {
-            // Optional: prompt user to select account if needed
             prompt: 'select_account'
           }
         }
@@ -156,15 +181,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
-            // We need to parse error_description in case of domain rejection
             if (params.error_description?.includes('kiit.ac.in') || params.error_description?.includes('Access Denied')) {
               setDomainError('Access Denied: Please sign in with your official roll-number@kiit.ac.in email account.');
               return;
             }
 
-            // The session will automatically be saved by the supabase deep link listener if configured properly,
-            // but we might need to manually set it for Expo Go.
-            // If we have an access_token, we can set it.
             if (params.access_token && params.refresh_token) {
               await supabase.auth.setSession({
                 access_token: params.access_token,
@@ -182,7 +203,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setDomainError(error.message || 'An error occurred during sign in');
       }
     } finally {
-      // Small timeout to allow auth state to settle before stopping loading
       setTimeout(() => setIsLoading(false), 500);
     }
   };
@@ -192,25 +212,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  const devSwitchUser = async (userId: string) => {
+  const devSwitchUser = async (key: string) => {
     if (!__DEV__) return;
 
     setIsLoading(true);
     setDomainError(null);
-    const email = SEED_PROFILES[userId as keyof typeof SEED_PROFILES];
 
-    if (email) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: "kiitpass123",
-      });
-      if (error) {
-        console.error("Mock Login Error:", error.message);
-        setDomainError(error.message);
-        setIsLoading(false);
-      }
-      // On success, the onAuthStateChange listener will handle fetching profile
+    // Normalize and match key to profile
+    const lowerKey = key.toLowerCase();
+    let targetEmail: string | null = null;
+
+    if (lowerKey.includes("1") || lowerKey.includes("arjun") || lowerKey.includes("2205001")) {
+      targetEmail = "2205001@kiit.ac.in";
+    } else if (lowerKey.includes("2") || lowerKey.includes("sneha") || lowerKey.includes("2205002")) {
+      targetEmail = "2205002@kiit.ac.in";
+    } else if (lowerKey.includes("3") || lowerKey.includes("ravi") || lowerKey.includes("2205003")) {
+      targetEmail = "2205003@kiit.ac.in";
+    }
+
+    const mockProfile = targetEmail ? DEV_MOCK_PROFILES[targetEmail] : null;
+
+    if (mockProfile) {
+      // Set mock user and session directly
+      const mockUser = {
+        id: mockProfile.id,
+        email: mockProfile.email,
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: new Date().toISOString(),
+      } as User;
+
+      const mockSession = {
+        access_token: "mock-token",
+        refresh_token: "mock-refresh",
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: "bearer",
+        user: mockUser,
+      } as Session;
+
+      setUser(mockUser);
+      setSession(mockSession);
+      setProfile(mockProfile);
+      setIsLoading(false);
+      router.replace("/(tabs)/collab");
     } else {
+      setDomainError("Unknown dev user. Use 2205001@kiit.ac.in, 2205002@kiit.ac.in, or 2205003@kiit.ac.in");
       setIsLoading(false);
     }
   };
