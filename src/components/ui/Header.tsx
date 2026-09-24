@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { BlurView } from "expo-blur";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LogOut, Sun, Moon } from "lucide-react-native";
 import { router } from "expo-router";
@@ -17,6 +17,7 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const { signOut, profile } = useAuth();
+  const targetRef = React.useRef<View | null>(null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -32,20 +33,19 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
         right: 0,
         zIndex: 50,
         paddingTop: insets.top,
-        height: insets.top + 48
+        height: insets.top + 48,
+        overflow: "hidden",
       }
     ]}>
-      {/* Blur backdrop */}
-      <BlurView
-        intensity={85}
-        tint={colors.isDark ? "dark" : "light"}
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Glass background */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassBg }]} />
-      {/* Specular border */}
-      <View style={[styles.border, { backgroundColor: colors.glassBorder }]} />
+      {/* Glass host */}
+      <View style={[
+        styles.glassHost,
+        {
+          backgroundColor: colors.isDark ? '#1C1C1E' : '#FFFFFF',
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.separator,
+        }
+      ]} />
 
       <View style={styles.content}>
         <View style={styles.leftContainer}>
@@ -54,17 +54,14 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
 
         <View style={styles.rightContainer}>
           {profile?.campus_location && (
-            <View style={[styles.campusPill, { backgroundColor: colors.tintBg }]}>
-              <Text style={[styles.campusText, { color: colors.tint }]}>{profile.campus_location}</Text>
+            <View style={[styles.campusPill, { backgroundColor: colors.card }]}>
+              <Text style={[styles.campusText, { color: colors.label }]}>
+                {profile.campus_location}
+              </Text>
             </View>
           )}
-
           <Pressable onPress={toggleTheme} style={[styles.iconButton, { backgroundColor: colors.card }]} hitSlop={8}>
             {colors.isDark ? <Sun size={18} color={colors.label} /> : <Moon size={18} color={colors.label} />}
-          </Pressable>
-
-          <Pressable onPress={handleSignOut} style={[styles.iconButton, { backgroundColor: colors.card }]} hitSlop={8}>
-            <LogOut size={18} color={colors.label} />
           </Pressable>
         </View>
       </View>
@@ -74,6 +71,9 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
 
 const styles = StyleSheet.create({
   container: { position: "absolute" },
+  glassHost: {
+    ...StyleSheet.absoluteFill,
+  },
   content: {
     flex: 1,
     flexDirection: "row",
@@ -88,11 +88,4 @@ const styles = StyleSheet.create({
   campusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   campusText: { fontSize: 12, fontWeight: "500" },
   iconButton: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  border: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-  },
 });

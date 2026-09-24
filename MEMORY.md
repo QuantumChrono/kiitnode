@@ -1,0 +1,1 @@
+- [Fix contact button color in light mode](fix-contact-button-color.md) — Made the contact button's text color responsive to theme by using `colors.label` in AppleButton primary variant

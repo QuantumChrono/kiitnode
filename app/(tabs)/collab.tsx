@@ -1,14 +1,16 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { MessageCircle } from 'lucide-react-native';
+import { MessageCircle, Info } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
+import { AppleButton } from '@/components/ui/AppleButton';
+import PostDetailModal from '@/components/modals/PostDetailModal';
 
 interface Post {
   id: string;
@@ -77,6 +79,7 @@ const SEED_POSTS: Post[] = [
 export default function CollabScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const handleWhatsApp = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -94,57 +97,136 @@ export default function CollabScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 56,
-          paddingBottom: insets.bottom + 96,
+          paddingTop: insets.top + 64,
+          paddingBottom: insets.bottom + 130,
           paddingHorizontal: 16,
         }}
       >
         {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label }]}>Teammates</Text>
+        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 16 }]}>Teammates</Text>
 
         {/* Seed Posts */}
         <View style={styles.postsContainer}>
           {SEED_POSTS.map((post) => (
-            <Card key={post.id} style={styles.postCard}>
-              {/* Title */}
-              <Text style={[styles.postTitle, { color: colors.label }]}>
+            <Card
+              key={post.id}
+              style={{
+                padding: 16,
+                gap: 10,
+                backgroundColor: colors.card
+              }}
+            >
+              {/* 1. Title takes full width */}
+              <Text style={{
+                fontSize: 17,
+                fontWeight: '600',
+                color: colors.label
+              }}>
                 {post.title}
               </Text>
 
-              {/* Author & Campus */}
-              <Text style={[styles.postMeta, { color: colors.secondaryLabel }]}>
+              {/* 2. Author and Location */}
+              <Text style={{
+                fontSize: 14,
+                color: colors.secondaryLabel
+              }}>
                 {post.author} • {post.campus}
               </Text>
 
-              {/* Skill Tags */}
-              <View style={styles.skillsRow}>
+              {/* 3. Skill & Bandwidth Badges */}
+              <View style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 6,
+                marginVertical: 4
+              }}>
+                {/* Skill Tags */}
                 {post.skills.map((skill) => (
-                  <View key={skill} style={[styles.skillPill, { backgroundColor: colors.tintBg }]}>
-                    <Text style={[styles.skillText, { color: colors.tint }]}>{skill}</Text>
+                  <View
+                    key={skill}
+                    style={{
+                      backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      borderCurve: 'continuous' as const
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '500',
+                      color: colors.label
+                    }}>
+                      {skill}
+                    </Text>
                   </View>
                 ))}
+
+                {/* Seriousness Badge */}
+                {post.seriousness && (
+                  <View style={{
+                    backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    borderCurve: 'continuous' as const
+                  }}>
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '500',
+                      color: colors.label
+                    }}>
+                      {post.seriousness}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Bandwidth Badge */}
+                {post.bandwidth && (
+                  <View style={{
+                    backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    borderCurve: 'continuous' as const
+                  }}>
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '500',
+                      color: colors.label
+                    }}>
+                      {post.bandwidth}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Badges Row */}
-              <View style={styles.badgesRow}>
-                <Badge variant="emerald">{post.seriousness}</Badge>
-                <Badge variant="slate">{post.bandwidth}</Badge>
-              </View>
-
-              {/* WhatsApp Action */}
-              {post.whatsapp && (
-                <Pressable
-                  style={[styles.whatsappButton, { backgroundColor: colors.tint }]}
+              {/* 4. Action Button Row: Dual Button Layout */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, width: '100%' }}>
+                <AppleButton
+                  title="Details"
+                  icon={Info}
+                  variant="secondary"
+                  onPress={() => setSelectedPost(post)}
+                  style={{ flex: 1 }}
+                />
+                <AppleButton
+                  title="Message"
+                  icon={MessageCircle}
+                  variant="primary"
                   onPress={() => handleWhatsApp(post.whatsapp!)}
-                >
-                  <MessageCircle size={16} color="#FFFFFF" />
-                  <Text style={styles.whatsappText}>Message</Text>
-                </Pressable>
-              )}
+                  style={{ flex: 1.2 }}
+                />
+              </View>
             </Card>
           ))}
         </View>
       </ScrollView>
+
+      {/* Details Bottom Sheet Modal */}
+      {selectedPost && (
+        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
     </View>
   );
 }
@@ -162,57 +244,5 @@ const styles = StyleSheet.create({
   },
   postsContainer: {
     gap: 12,
-  },
-  postCard: {
-    padding: 16,
-    gap: 8,
-  },
-  postTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.41,
-    lineHeight: 22,
-  },
-  postMeta: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: -0.24,
-  },
-  skillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
-  },
-  skillPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderCurve: 'continuous' as const,
-  },
-  skillText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  whatsappButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderCurve: 'continuous' as const,
-    marginTop: 8,
-  },
-  whatsappText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: -0.24,
   },
 });

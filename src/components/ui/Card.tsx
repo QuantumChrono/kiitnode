@@ -12,14 +12,43 @@ interface CardProps {
 export function Card({ children, className = "", style, onPress }: CardProps) {
   const { colors, isDark } = useTheme();
 
-  const content = (
+  const baseStyle = [
+    styles.container,
+    {
+      borderColor: colors.separator,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: isDark
+        ? 'rgba(255, 255, 255, 0.10)'
+        : 'rgba(255, 255, 255, 0.80)',
+      shadowOpacity: isDark ? 0 : 0.04,
+    },
+  ];
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          baseStyle,
+          {
+            backgroundColor: pressed ? colors.cardPressed : colors.card,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+            opacity: pressed ? 0.90 : 1,
+          },
+          style,
+        ]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
+
+  return (
     <View
       style={[
-        styles.container,
+        baseStyle,
         {
           backgroundColor: colors.card,
-          borderColor: colors.separator,
-          shadowOpacity: isDark ? 0.04 : 0.04,
         },
         style,
       ]}
@@ -28,19 +57,6 @@ export function Card({ children, className = "", style, onPress }: CardProps) {
       {children}
     </View>
   );
-
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => (pressed ? styles.pressed : undefined)}
-      >
-        {content}
-      </Pressable>
-    );
-  }
-
-  return content;
 }
 
 const styles = StyleSheet.create({
@@ -49,12 +65,9 @@ const styles = StyleSheet.create({
     borderCurve: "continuous" as const,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
     elevation: 2,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });

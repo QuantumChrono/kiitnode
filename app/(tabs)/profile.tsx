@@ -80,28 +80,88 @@ export default function ProfileScreen() {
 
         {/* Quick Action Row - 3 Circular Glass Buttons */}
         <View style={styles.actionRow}>
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: colors.isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.04)" }]}
-            onPress={handleWhatsApp}
-          >
-            <MessageCircle size={24} color={colors.tint} />
-            <Text style={[styles.actionLabel, { color: colors.secondaryLabel }]}>WhatsApp</Text>
+          <Pressable onPress={handleWhatsApp} style={{}}>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 25,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.cardPressed,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MessageCircle size={24} color={colors.tint} />
+              </View>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '600',
+                  color: colors.secondaryLabel,
+                  textTransform: 'uppercase',
+                }}
+              >
+                WhatsApp
+              </Text>
+            </View>
           </Pressable>
 
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: colors.isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.04)" }]}
-            onPress={handleEmail}
-          >
-            <Mail size={24} color={colors.blue} />
-            <Text style={[styles.actionLabel, { color: colors.secondaryLabel }]}>Email</Text>
+          <Pressable onPress={handleEmail} style={{}}>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 25,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.cardPressed,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Mail size={24} color={colors.blue} />
+              </View>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '600',
+                  color: colors.secondaryLabel,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Email
+              </Text>
+            </View>
           </Pressable>
 
-          <Pressable
-            style={[styles.actionButton, { backgroundColor: colors.isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.04)" }]}
-            onPress={() => setIsEditModalVisible(true)}
-          >
-            <Edit3 size={24} color={colors.label} />
-            <Text style={[styles.actionLabel, { color: colors.secondaryLabel }]}>Edit</Text>
+          <Pressable onPress={() => setIsEditModalVisible(true)} style={{}}>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 25,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.cardPressed,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Edit3 size={24} color={colors.label} />
+              </View>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '600',
+                  color: colors.secondaryLabel,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Edit
+              </Text>
+            </View>
           </Pressable>
         </View>
 

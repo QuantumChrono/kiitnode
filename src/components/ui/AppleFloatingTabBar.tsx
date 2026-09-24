@@ -1,25 +1,31 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function AppleFloatingTabBar({ state, descriptors, navigation, insets }: any) {
   const colors = useThemeColors();
+  const targetRef = React.useRef<View | null>(null);
 
   return (
-    <View style={[styles.container, { bottom: insets?.bottom != null ? Math.max(insets.bottom + 8, 16) : 20 }]}>
-      {/* Blur background with dimezisBlurView on Android */}
-      <BlurView
-        intensity={85}
-        tint={colors.isDark ? "dark" : "light"}
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Glass background */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassBg }]} />
-      {/* Specular border */}
-      <View style={[styles.border, { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.glassBorder }]} />
+    <View style={[
+      styles.container,
+      {
+        bottom: insets?.bottom != null ? Math.max(insets.bottom + 8, 16) : 20,
+        zIndex: 50,
+      }
+    ]}>
+      {/* Glass host replaced with solid background */}
+      <View style={[
+        styles.glassHost,
+        {
+          backgroundColor: colors.isDark ? '#1C1C1E' : '#FFFFFF',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.separator,
+        }
+      ]} />
+
       {/* Tab content */}
       <View style={styles.tabContent}>
         {state.routes.map((route: any, index: number) => {
@@ -33,7 +39,7 @@ export default function AppleFloatingTabBar({ state, descriptors, navigation, in
               onPress={() => navigation.navigate(route.name)}
               style={styles.tabItem}
             >
-              {options.tabBarIcon({ color, size: 24 })}
+              {options.tabBarIcon({ color, size: 22 })}
               <Text style={[
                 styles.tabLabel,
                 { color },
@@ -60,12 +66,10 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     borderCurve: "continuous" as const,
     overflow: "hidden",
+    backgroundColor: 'transparent', // Host must be transparent (now overridden by glassHost)
   },
-  border: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
+  glassHost: {
+    ...StyleSheet.absoluteFill,
   },
   tabContent: {
     flex: 1,
@@ -76,11 +80,10 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
 });

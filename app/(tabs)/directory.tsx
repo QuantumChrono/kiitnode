@@ -81,13 +81,13 @@ export default function DirectoryScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 56,
-          paddingBottom: insets.bottom + 96,
+          paddingTop: insets.top + 64,
+          paddingBottom: insets.bottom + 130,
           paddingHorizontal: 16,
         }}
       >
         {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label }]}>Directory</Text>
+        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 16 }]}>Directory</Text>
 
         {/* Seed Resources */}
         <View style={styles.resourcesContainer}>

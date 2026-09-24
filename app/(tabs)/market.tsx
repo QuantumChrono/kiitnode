@@ -1,12 +1,14 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { MessageCircle, MapPin } from 'lucide-react-native';
+import { MessageCircle, Info, MapPin } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { AppleButton } from '@/components/ui/AppleButton';
+import PostDetailModal from '@/components/modals/PostDetailModal';
 
 interface Listing {
   id: string;
@@ -55,19 +57,11 @@ const SEED_LISTINGS: Listing[] = [
 export default function MarketScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const [selectedPost, setSelectedPost] = useState<Listing | null>(null);
 
   const handleWhatsApp = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     Linking.openURL(`whatsapp://send?phone=${cleanPhone}`);
-  };
-
-  const getTypeVariant = (type: Listing['type']) => {
-    switch (type) {
-      case 'selling': return 'emerald';
-      case 'buying': return 'blue';
-      case 'renting': return 'amber';
-      default: return 'slate';
-    }
   };
 
   return (
@@ -76,8 +70,8 @@ export default function MarketScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 56,
-          paddingBottom: insets.bottom + 96,
+          paddingTop: insets.top + 60,
+          paddingBottom: insets.bottom + 120,
           paddingHorizontal: 16,
         }}
       >
@@ -87,46 +81,65 @@ export default function MarketScreen() {
         {/* Seed Listings */}
         <View style={styles.listingsContainer}>
           {SEED_LISTINGS.map((listing) => (
-            <Card key={listing.id} style={styles.listingCard}>
-              {/* Title & Price Row */}
-              <View style={styles.titleRow}>
-                <Text style={[styles.listingTitle, { color: colors.label }]}>
+            <Card key={listing.id} style={{ padding: 16, gap: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <Text style={{ fontSize: 17, fontWeight: '600', color: colors.label, flex: 1, flexWrap: 'wrap' }}>
                   {listing.title}
                 </Text>
-                <Text style={[styles.listingPrice, { color: colors.label }]}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.label }}>
                   {listing.price}
                 </Text>
               </View>
 
-              {/* Location */}
-              <View style={styles.locationRow}>
-                <MapPin size={14} color={colors.secondaryLabel} />
-                <Text style={[styles.locationText, { color: colors.secondaryLabel }]}>
-                  {listing.location}
-                </Text>
-              </View>
+              <Text style={{ fontSize: 14, color: colors.secondaryLabel }}>
+                {listing.location}
+              </Text>
 
-              {/* Type Badge */}
-              <View style={styles.typeRow}>
-                <Badge variant={getTypeVariant(listing.type)}>
-                  {listing.type.charAt(0).toUpperCase() + listing.type.slice(1)}
-                </Badge>
-              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                {/* Badge (Selling/Buying) */}
+                {listing.type && (
+                  <View style={[
+                    styles.typeBadge,
+                    {
+                      backgroundColor: colors.tintBg,
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.typeBadgeText,
+                      { color: colors.label },
+                    ]}>
+                      {listing.type.charAt(0).toUpperCase() + listing.type.slice(1)}
+                    </Text>
+                  </View>
+                )}
 
-              {/* WhatsApp Action */}
-              {listing.whatsapp && (
-                <Pressable
-                  style={[styles.whatsappButton, { backgroundColor: colors.tint }]}
-                  onPress={() => handleWhatsApp(listing.whatsapp!)}
-                >
-                  <MessageCircle size={16} color="#FFFFFF" />
-                  <Text style={styles.whatsappText}>Contact</Text>
-                </Pressable>
-              )}
+                {/* Action Button Row: Dual Button Layout */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                  <AppleButton
+                    title="Details"
+                    icon={Info}
+                    variant="secondary"
+                    onPress={() => setSelectedPost(listing)}
+                    style={{ flex: 1 }}
+                  />
+                  <AppleButton
+                    title="Contact"
+                    icon={MessageCircle}
+                    variant="primary"
+                    onPress={() => handleWhatsApp(listing.whatsapp!)}
+                    style={{ flex: 1.2 }}
+                  />
+                </View>
+              </View>
             </Card>
           ))}
         </View>
       </ScrollView>
+
+      {/* Details Bottom Sheet Modal */}
+      {selectedPost && (
+        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
     </View>
   );
 }
@@ -177,6 +190,47 @@ const styles = StyleSheet.create({
   },
   typeRow: {
     marginTop: 4,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderCurve: 'continuous' as const,
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: -0.24,
+  },
+  actionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderCurve: 'continuous' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: -0.24,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  detailsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   whatsappButton: {
     flexDirection: 'row',

@@ -28,7 +28,7 @@ export function useThemeColors(): ThemeColors {
     secondaryLabel: colors.secondaryLabel,
     tertiaryLabel: colors.tertiaryLabel,
     separator: colors.separator,
-    glassBg: isDark ? "rgba(28, 28, 30, 0.88)" : "rgba(255, 255, 255, 0.88)",
+    glassBg: isDark ? "rgba(18, 18, 20, 0.92)" : "rgba(248, 248, 250, 0.92)",
     glassBorder: colors.glassBorder,
     tint: colors.green,
     tintBg: colors.greenTint,

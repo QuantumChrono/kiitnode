@@ -70,13 +70,13 @@ export default function ForumScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 56,
-          paddingBottom: insets.bottom + 96,
+          paddingTop: insets.top + 64,
+          paddingBottom: insets.bottom + 130,
           paddingHorizontal: 16,
         }}
       >
         {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label }]}>Forum</Text>
+        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 16 }]}>Forum</Text>
 
         {/* Seed Posts */}
         <View style={styles.postsContainer}>
