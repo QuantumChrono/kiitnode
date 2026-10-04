@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Header } from '@/components/ui/Header';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { MessageCircle, Info } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
+import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import FloatingActionButton from '@/components/ui/FloatingActionButton';
-import { AppleButton } from '@/components/ui/AppleButton';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import PostDetailModal from '@/components/modals/PostDetailModal';
 import CreateCollabModal from '@/components/modals/CreateCollabModal';
+import { AppleButton } from '@/components/ui/AppleButton';
 
 interface Post {
   id: string;
@@ -35,7 +32,7 @@ const SEED_POSTS: Post[] = [
     skills: ['React Native', 'TypeScript'],
     seriousness: 'Serious',
     bandwidth: '5-10 hrs/week',
-    whatsapp: '919999999991',
+    whatsapp: '9999999991',
     looking_for: 'Backend Developer',
     content: 'We are building a campus event management app and need a React Native developer to join our team. Experience with Expo and TypeScript preferred.'
   },
@@ -47,45 +44,9 @@ const SEED_POSTS: Post[] = [
     skills: ['Machine Learning', 'Python'],
     seriousness: 'Casual',
     bandwidth: '2-5 hrs/week',
-    whatsapp: '919999999992',
+    whatsapp: '9999999992',
     looking_for: 'ML Engineer',
     content: 'Working on a natural language processing project for sentiment analysis of student feedback. Looking for teammates with ML/NLP experience.'
-  },
-  {
-    id: '3',
-    title: 'Hackathon team — SIH 2026',
-    author: 'Arjun Patel',
-    campus: 'Campus 6',
-    skills: ['Full Stack', 'AI/ML'],
-    seriousness: 'Very Serious',
-    bandwidth: '20+ hrs/week',
-    whatsapp: '919999999991',
-    looking_for: 'Full Stack Developer',
-    content: 'Preparing for Smart India Hackathon 2026. Need a full stack developer to build a healthcare solution using React Native and Node.js.'
-  },
-  {
-    id: '4',
-    title: 'IoT project partner needed',
-    author: 'Sneha Mohanty',
-    campus: 'Campus 15',
-    skills: ['Arduino', 'Sensors'],
-    seriousness: 'Serious',
-    bandwidth: '5-10 hrs/week',
-    whatsapp: '919999999992',
-    looking_for: 'IoT Engineer',
-    content: 'Building a smart campus irrigation system using Arduino and soil moisture sensors. Need a partner with IoT and embedded systems experience.'
-  },
-  {
-    id: '5',
-    title: 'Open-source contributors wanted',
-    author: 'Arjun Patel',
-    campus: 'Campus 6',
-    skills: ['Git', 'Open Source'],
-    seriousness: 'Casual',
-    bandwidth: 'Any',
-    whatsapp: '919999999991',
-    looking_for: 'Open Source Contributor',
-    content: 'Maintaining an open-source library for campus navigation. Looking for contributors to help with documentation, testing, and feature development.'
   },
 ];
 
@@ -95,190 +56,95 @@ export default function CollabScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
-  const handleWhatsApp = (phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    Linking.openURL(`whatsapp://send?phone=${cleanPhone}`);
+  const handleWhatsApp = (phone?: string) => {
+    if (!phone) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const cleanPhone = phone.replace(/\D/g, '').slice(-10); // Extract 10-digit number
+      Linking.openURL('whatsapp://send?phone=91' + cleanPhone);
+    } catch (e) {
+      console.warn("Could not open WhatsApp", e);
+    }
   };
 
   const handleCreatePost = (newPost: any) => {
-    // Prepend new post to the feed
     setIsCreateModalVisible(false);
-    // In a real app, we would fetch fresh data or update state
-    // For now, we'll just close the modal and rely on refresh
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Header />
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 64, paddingBottom: 180, paddingHorizontal: 16 }}>
+        <Text style={{ fontSize: 34, fontWeight: '700', color: colors.label, marginBottom: 16, marginTop: 8 }}>Teammates</Text>
 
-      <FloatingActionButton onPress={() => setIsCreateModalVisible(true)} />
-
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop: insets.top + 64,
-          paddingBottom: insets.bottom + 130,
-          paddingHorizontal: 16,
-        }}
-      >
-        {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 16 }]}>Teammates</Text>
-
-        {/* Seed Posts */}
-        <View style={styles.postsContainer}>
-          {SEED_POSTS.map((post) => (
-            <Card
-              key={post.id}
-              style={{
-                padding: 16,
-                gap: 10,
-                backgroundColor: colors.card
-              }}
-            >
-              {/* 1. Title takes full width */}
-              <Text style={{
-                fontSize: 17,
-                fontWeight: '600',
-                color: colors.label
-              }}>
-                {post.title}
-              </Text>
-
-              {/* 2. Author and Location */}
-              <Text style={{
-                fontSize: 14,
-                color: colors.secondaryLabel
-              }}>
-                {post.author} • {post.campus}
-              </Text>
-
-              {/* 3. Looking For (if exists) */}
-              {post.looking_for && (
-                <Text style={{
-                  fontSize: 14,
-                  color: colors.blue,
-                  marginVertical: 4
-                }}>
-                  Looking for: {post.looking_for}
-                </Text>
-              )}
-
-              {/* 4. Skill & Bandwidth Badges */}
-              <View style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 6,
-                marginVertical: 4
-              }}>
-                {/* Skill Tags */}
-                {post.skills.map((skill) => (
-                  <View
-                    key={skill}
-                    style={{
-                      backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 8,
-                      borderCurve: 'continuous' as const
-                    }}
-                  >
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '500',
-                      color: colors.label
-                    }}>
-                      {skill}
-                    </Text>
-                  </View>
-                ))}
-
-                {/* Seriousness Badge */}
-                {post.seriousness && (
-                  <View style={{
-                    backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    borderCurve: 'continuous' as const
-                  }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '500',
-                      color: colors.label
-                    }}>
-                      {post.seriousness}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Bandwidth Badge */}
-                {post.bandwidth && (
-                  <View style={{
-                    backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    borderCurve: 'continuous' as const
-                  }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '500',
-                      color: colors.label
-                    }}>
-                      {post.bandwidth}
-                    </Text>
-                  </View>
-                )}
+        {SEED_POSTS.map((post) => (
+          <Pressable
+            key={post.id}
+            onPress={() => setSelectedPost(post)}
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 20,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            {/* Row 1: Avatar & Author */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.tintBg, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.tint }}>
+                   {post.author.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                 </Text>
               </View>
-
-              {/* 5. Action Button Row: Dual Button Layout */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, width: '100%' }}>
-                <AppleButton
-                  title="Details"
-                  icon={Info}
-                  variant="secondary"
-                  onPress={() => setSelectedPost(post)}
-                  style={{ flex: 1 }}
-                />
-                <AppleButton
-                  title="Message"
-                  icon={MessageCircle}
-                  variant="primary"
-                  onPress={() => handleWhatsApp(post.whatsapp!)}
-                  style={{ flex: 1.2 }}
-                />
+              <View>
+                <Text style={{ color: colors.label, fontSize: 16, fontWeight: '600' }}>{post.author}</Text>
+                <Text style={{ color: colors.secondaryLabel, fontSize: 14 }}>{post.campus}</Text>
               </View>
-            </Card>
-          ))}
-        </View>
+            </View>
+
+            {/* Row 2: Title */}
+            <Text style={{ fontSize: 17, fontWeight: 'bold', color: colors.label, marginBottom: 8 }}>
+              {post.title}
+            </Text>
+
+            {/* Row 3: Looking for */}
+            {post.looking_for && (
+              <Text style={{ fontSize: 15, color: colors.blue, marginBottom: 12 }}>
+                Looking for: {post.looking_for}
+              </Text>
+            )}
+
+            {/* Row 4: Tags */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {[...(post.skills || []), post.seriousness, post.bandwidth].filter(Boolean).map((tag, idx) => (
+                <View key={idx} style={{ backgroundColor: colors.cardPressed, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' }}>
+                  <Text style={{ color: colors.label, fontSize: 13 }}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Row 5: Action Bar */}
+            <View style={{ alignItems: 'flex-end' }}>
+              <AppleButton
+                variant="primary"
+                title="WhatsApp"
+                onPress={() => handleWhatsApp(post.whatsapp)}
+              />
+            </View>
+          </Pressable>
+        ))}
       </ScrollView>
 
-      {/* Create Collab Modal */}
       <CreateCollabModal
         visible={isCreateModalVisible}
         onRequestClose={() => setIsCreateModalVisible(false)}
         onPostCreated={handleCreatePost}
       />
 
-      {/* Details Bottom Sheet Modal */}
       {selectedPost && (
         <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
       )}
+
+      <FloatingActionButton onPress={() => setIsCreateModalVisible(true)} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  largeTitle: {
-    fontSize: 34,
-    fontWeight: '700',
-    letterSpacing: 0.37,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  postsContainer: {
-    gap: 12,
-  },
-});

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { MessageCircle, Info, MapPin } from 'lucide-react-native';
+import { MessageCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
+import * as Haptics from 'expo-haptics';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { AppleButton } from '@/components/ui/AppleButton';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import PostDetailModal from '@/components/modals/PostDetailModal';
 import CreateMarketModal from '@/components/modals/CreateMarketModal';
 
@@ -18,6 +18,8 @@ interface Listing {
   location: string;
   type: 'selling' | 'buying' | 'renting';
   whatsapp?: string;
+  author?: string;
+  content?: string;
 }
 
 const SEED_LISTINGS: Listing[] = [
@@ -27,7 +29,9 @@ const SEED_LISTINGS: Listing[] = [
     price: '₹2500',
     location: 'Campus 6 Food Court',
     type: 'selling',
+    author: 'Ravi Kumar',
     whatsapp: '919999999991',
+    content: 'Perfect condition calculator, used for one semester. Includes charging cable.'
   },
   {
     id: '2',
@@ -35,23 +39,9 @@ const SEED_LISTINGS: Listing[] = [
     price: '₹3000',
     location: 'Hostel KP-7 Gate',
     type: 'buying',
+    author: 'Sneha Mohanty',
     whatsapp: '919999999992',
-  },
-  {
-    id: '3',
-    title: 'Room cooler rental',
-    price: '₹500/mo',
-    location: 'Library Lawn',
-    type: 'renting',
-    whatsapp: '919999999991',
-  },
-  {
-    id: '4',
-    title: 'Data Structures textbook',
-    price: '₹400',
-    location: 'Campus 6 Food Court',
-    type: 'selling',
-    whatsapp: '919999999992',
+    content: 'Looking for a cycle in good condition for daily commute to campus.'
   },
 ];
 
@@ -63,6 +53,7 @@ export default function MarketScreen() {
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
   const handleWhatsApp = (phone: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const cleanPhone = phone.replace(/\D/g, '');
     Linking.openURL(`whatsapp://send?phone=${cleanPhone}`);
   };
@@ -73,221 +64,152 @@ export default function MarketScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 60,
-          paddingBottom: insets.bottom + 120,
+          paddingTop: insets.top + 56,
+          paddingBottom: 160,
           paddingHorizontal: 16,
+          gap: 16
         }}
       >
-        {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label }]}>Market</Text>
+        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 0 }]}>Market</Text>
 
-        {/* Seed Listings */}
         <View style={styles.listingsContainer}>
           {seedListings.map((listing) => (
-            <Card key={listing.id} style={{ padding: 16, gap: 12 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                <Text style={{ fontSize: 17, fontWeight: '600', color: colors.label, flex: 1, flexWrap: 'wrap' }}>
-                  {listing.title}
-                </Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.label }}>
-                  {listing.price}
-                </Text>
-              </View>
-
-              <Text style={{ fontSize: 14, color: colors.secondaryLabel }}>
-                {listing.location}
-              </Text>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                {/* Badge (Selling/Buying) */}
-                {listing.type && (
-                  <View style={[
-                    styles.typeBadge,
-                    {
-                      backgroundColor: colors.tintBg,
-                    }
-                  ]}>
-                    <Text style={[
-                      styles.typeBadgeText,
-                      { color: colors.label },
-                    ]}>
-                      {listing.type.charAt(0).toUpperCase() + listing.type.slice(1)}
+            <Pressable
+              key={listing.id}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedPost(listing);
+              }}
+              style={({ pressed }) => pressed && styles.cardPressed}
+            >
+              <Card style={{ padding: 16, gap: 12, backgroundColor: colors.card }}>
+                {/* Header Row: Avatar, Author Name, Metadata */}
+                <View style={styles.headerRow}>
+                  <View style={[styles.avatar, { backgroundColor: colors.tintBg }]}>
+                    <Text style={[styles.avatarText, { color: colors.tint }]}>
+                      {(listing.author || 'Anonymous').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                     </Text>
                   </View>
-                )}
-
-                {/* Action Button Row: Dual Button Layout */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
-                  <AppleButton
-                    title="Details"
-                    icon={Info}
-                    variant="secondary"
-                    onPress={() => setSelectedPost(listing)}
-                    style={{ flex: 1 }}
-                  />
-                  <AppleButton
-                    title="Contact"
-                    icon={MessageCircle}
-                    variant="primary"
-                    onPress={() => handleWhatsApp(listing.whatsapp!)}
-                    style={{ flex: 1.2 }}
-                  />
+                  <View style={styles.headerTextInfo}>
+                    <Text style={[styles.authorName, { color: colors.label }]}>{listing.author || 'Anonymous'}</Text>
+                    <Text style={[styles.metadata, { color: colors.secondaryLabel }]}>{listing.location}</Text>
+                  </View>
                 </View>
-              </View>
-            </Card>
+
+                {/* Body: Title, Description */}
+                <View style={styles.bodyBlock}>
+                  <Text style={[styles.postTitle, { color: colors.label }]}>
+                    {listing.title}
+                  </Text>
+                  {listing.content && (
+                    <Text style={[styles.postDesc, { color: colors.secondaryLabel }]} numberOfLines={3}>
+                      {listing.content}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Tags/Price: Intrinsic width pills */}
+                <View style={styles.tagsContainer}>
+                  <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                    <Text style={[styles.tagText, { color: colors.label, fontWeight: '700' }]}>{listing.price}</Text>
+                  </View>
+                  {listing.type && (
+                    <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                      <Text style={[styles.tagText, { color: colors.label, textTransform: 'capitalize' }]}>
+                        {listing.type}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Social Action Bar */}
+                <View style={[styles.actionBar, { borderTopColor: colors.separator }]}>
+                  <Pressable
+                    onPress={() => {
+                      if (listing.whatsapp) {
+                        handleWhatsApp(listing.whatsapp);
+                      } else {
+                        setSelectedPost(listing);
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.messageButton,
+                      {
+                        backgroundColor: pressed ? colors.tint : colors.cardPressed,
+                        transform: [{ scale: pressed ? 0.96 : 1 }]
+                      }
+                    ]}
+                  >
+                    <MessageCircle size={18} color={colors.label} />
+                    <Text style={[styles.messageButtonText, { color: colors.label }]}>Contact</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
 
-      {/* Details Bottom Sheet Modal */}
-      {selectedPost && (
-        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
-      )}
-
-      {/* Floating Action Button */}
-      <AppleButton
-        title="Create Market Post"
-        icon={MessageCircle} // Using MessageCircle as a placeholder for create icon
-        variant="primary"
-        onPress={() => setIsCreateModalVisible(true)}
-        style={{
-          position: 'absolute',
-          bottom: 24 + insets.bottom,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-        }}
-      />
-
-      {/* Create Market Modal */}
       <CreateMarketModal
         visible={isCreateModalVisible}
         onRequestClose={() => setIsCreateModalVisible(false)}
         onPostCreated={(newPost) => {
-          // Prepend the new post to the seed listings for immediate display
-          // Convert the new post from Supabase to our Listing format
           const newListing: Listing = {
             id: newPost.id,
             title: newPost.title,
-            price: `₹${newPost.content}`, // Price is stored in content field for market
+            price: `₹${newPost.content}`,
             location: newPost.location_tag || 'Campus Location',
-            type: newPost.content.toLowerCase().includes('/mo') ? 'renting' :
-                   newPost.content.toLowerCase().includes('buy') || newPost.content.toLowerCase().includes('purchase') ? 'buying' : 'selling',
-            whatsapp: newPost.user_id ? '919999999999' : undefined // Placeholder - in real app would get from user profile
+            type: newPost.content.toLowerCase().includes('/mo') ? 'renting' : 'selling',
+            whatsapp: '919999999999'
           };
-
-          // Update seed listings with new post at the beginning
           setSeedListings([newListing, ...seedListings]);
           setIsCreateModalVisible(false);
         }}
       />
+
+      {selectedPost && (
+        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
+
+      <FloatingActionButton onPress={() => setIsCreateModalVisible(true)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  largeTitle: {
-    fontSize: 34,
-    fontWeight: '700',
-    letterSpacing: 0.37,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  listingsContainer: {
-    gap: 12,
-  },
-  listingCard: {
-    padding: 16,
-    gap: 8,
-  },
-  titleRow: {
+  container: { flex: 1 },
+  largeTitle: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 },
+  listingsContainer: { gap: 16 },
+  cardPressed: { opacity: 0.92 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 16, fontWeight: '600' },
+  headerTextInfo: { flex: 1 },
+  authorName: { fontSize: 16, fontWeight: '600' },
+  metadata: { fontSize: 13, fontWeight: '400', marginTop: 2 },
+  bodyBlock: { gap: 6 },
+  postTitle: { fontSize: 17, fontWeight: '700' },
+  postDesc: { fontSize: 15, lineHeight: 20 },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignSelf: 'flex-start' },
+  tagPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tagText: { fontSize: 13, fontWeight: '500' },
+  actionBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  listingTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.41,
-    flex: 1,
-  },
-  listingPrice: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.41,
-  },
-  locationRow: {
+  messageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  locationText: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: -0.24,
-  },
-  typeRow: {
-    marginTop: 4,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderCurve: 'continuous' as const,
-  },
-  typeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: -0.24,
-  },
-  actionButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    borderCurve: 'continuous' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 60,
-  },
-  actionButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: -0.24,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  detailsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  whatsappButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    borderCurve: 'continuous' as const,
-    marginTop: 8,
   },
-  whatsappText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  messageButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: -0.24,
   },
 });

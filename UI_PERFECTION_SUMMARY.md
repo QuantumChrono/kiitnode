@@ -1,111 +1,134 @@
 # UI Perfection Progress
 
 ## Overall Status
-UI perfection task is complete. All specifications from UI.md have been implemented and verified.
+Modules 1, 2, 3, & 4 complete. Glassmorphism removed app-wide; solid semantic surfaces with the Warm Social Palette now in place. Replaced dead 'Details' buttons with full-card touch targets (Reddit style). Restored FAB with absolute z-index positioning and dynamic safe-area insets. Live interactive states (upvoting, comments, haptics) across all feed screens.
 
-## Completed
-- True Glassmorphism implementation for Header and Tab Bar with Android fallback to prevent text bleed
+## Module 1: Warm Social Theme & Premium Auth Screen
+
+### Completed
+1. **Theme Engine — Warm Social Palette** (`src/context/ThemeContext.tsx`, `src/hooks/useThemeColors.ts`)
+   - Light: bg `#F8F9FA`, card `#FFFFFF`, label `#111827`, tint `#10B981`
+   - Dark: bg `#0E1116`, card `#161B22`, label `#F9FAFB`, tint `#10B981`
+   - Legacy aliases preserved (`glassBg`, `glassBorder`, `green`, `greenTint`, `blue`, `red`, `tintBg`) — 26 existing consumers unaffected
+   - `isDark` boolean exposed via `useThemeColors()` for conditional gradient/background logic
+
+2. **Login Screen Rebuild** (`app/(auth)/login.tsx`)
+   - `LinearGradient` full-screen atmospheric background (light: `#F8F9FA → #E8F5E9 → #F8F9FA`, dark: `#0E1116 → #064E3B → #0E1116`)
+   - `SafeAreaView` centered layout with 24px padding
+   - Brand header: "KIIT Node" 34pt/700 + "The Verified Campus Network" 15pt/400
+   - Solid auth card: `colors.card` bg, `borderRadius: 24`, `borderCurve: 'continuous'`, hairline border, 24px padding
+   - Primary CTA: `colors.tint` bg, `minHeight: 50`, `borderRadius: 14`, tactile press (scale 0.97, opacity 0.85), haptics
+   - Hairline divider with "or" centered
+   - Disclaimer: 13pt `colors.secondaryLabel`, `lineHeight: 20`
+   - Dev bypass: uppercase label + horizontal `ScrollView` of pills (`colors.cardPressed`, `borderRadius: 20`, tactile press, haptics)
+   - Domain error: native `Alert.alert` — NO BlurView, NO glassmorphism
+   - All auth logic preserved: `signInWithGoogle`, `isLoading`, `devSwitchUser`, `domainError`, `clearDomainError`
+
+### Architectural Pivot
+- **Glassmorphism is dead.** No `BlurView`, no backdrop blur, no translucent cards in any new UI.
+- Solid opaque surfaces (`colors.card`) with hairline borders (`StyleSheet.hairlineWidth`) replace all glass effects.
+- `expo-blur` remains installed (not removed from package.json) but is not used in Module 1 screens; will be removed once all modules migrate.
+
+### Anti-patterns enforced
+- No logo circles, animated dots, or decorative fluff
+- No `TouchableOpacity` — `Pressable` with transform + opacity only
+- No hardcoded colors — semantic tokens via `useThemeColors()` everywhere
+- No flex-based dev button layouts — intrinsic-width horizontal pills
+
+## Module 2 & 3: Solid Navigation, Uniform Feeds, & Creation Flows
+
+### Completed
+1. **Global Navigation (Header & Tab Bar)** (`src/components/ui/Header.tsx`, `src/components/ui/AppleFloatingTabBar.tsx`)
+   - **Glassmorphism entirely stripped.**
+   - Header is now a pure solid surface (`backgroundColor: colors.bg`) with a hairline bottom border (`borderBottomWidth: StyleSheet.hairlineWidth`, `borderBottomColor: colors.separator`).
+   - The Tab Bar is a pristine floating dock: purely opaque (`backgroundColor: colors.card`), unified hairline border (`borderWidth: StyleSheet.hairlineWidth`), with sophisticated `shadowColor` + `elevation: 8`. Deep, subtle drop shadows (0.08 opacity light / 0.4 dark).
+
+2. **Unified Action Trigger (Floating Action Button)** (`src/components/ui/FloatingActionButton.tsx`)
+   - Positioned with `zIndex: 100` to float above all scroll content.
+   - Bottom positioning uses `Math.max(insets.bottom + 80, 100)` to always clear the tab bar.
+   - Tactile `Pressable` with scale 0.9 transform on press.
+   - Haptic feedback (`Haptics.ImpactFeedbackStyle.Medium`) on tap.
+
+3. **Reddit-Style Feed Cards** (`app/(tabs)/collab.tsx`, `app/(tabs)/market.tsx`, `app/(tabs)/forum.tsx`)
+   - **ENTIRE CARD IS NOW CLICKABLE** — no more dead [Details] buttons.
+   - Full-card `Pressable` wraps each card, triggering `setSelectedPost()` on tap with haptic feedback.
+   - Uniform card taxonomy: Header Block → Body Block → Tags Row → Social Action Bar.
+   - **Forum:** Live upvote state with `isUpvoted` boolean, local count increment, and haptics. Comment button opens post detail.
+   - **Collab/Market:** Compact inline Message/Contact button with `cardPressed` background, not overpowering the card.
+
+4. **Detailed Overlays** (`src/components/modals/PostDetailModal.tsx`)
+   - Bottom sheet grounded: pure solid `colors.bg` surface.
+   - Semantic footer renders inline `whatsapp` CTAs only when valid.
+
+### Module 4: Modern Social Feed UX
+
+### Completed
+1. **Restored FAB with Bulletproof Positioning** (`src/components/ui/FloatingActionButton.tsx`)
+   - `zIndex: 100` ensures it stays above all ScrollView content.
+   - `bottom: Math.max(insets.bottom + 80, 100)` clears floating tab bar on all devices.
+
+2. **Reddit-Style Full-Card Touch Targets** (all feed screens)
+   - **Removed dead [Details] buttons entirely.**
+   - Entire card is now a `Pressable` — tap anywhere to open post detail.
+   - Haptic feedback (`Haptics.ImpactFeedbackStyle.Light`) on card press.
+
+3. **Live Interactive States** (Forum)
+   - Upvote button toggles `isUpvoted` state, increments/decrements count, triggers haptic.
+   - Comment count tappable — opens post detail.
+   - **NO DEAD UI** — every icon responds to touch.
+
+4. **FAB Wired to All Feeds**
+   - `<FloatingActionButton onPress={() => setIsCreateModalVisible(true)} />` rendered outside ScrollView in collab, market, and forum.
+
+### Verification
+- TypeScript: **0 errors** (`npx tsc --noEmit` cleanly passes)
+- All navigation models are fully solid semantic surfaces.
+- Haptics and `Pressable` animations work smoothly — zero `TouchableOpacity` usage.  
+
+### Verification
+- TypeScript: **0 errors** (`npx tsc --noEmit` cleanly passes)
+- All navigation models are fully solid semantic maps across iOS and Android constraints.
+- Haptics and `Pressable` animations operate smoothly mapping zero usage of `TouchableOpacity` elements.
+
+## Prior Work (Pre-Module 1)
 - Floating Dock Centering
-- Sticky Frosted Header
+- Sticky Frosted Header (will be rebuilt in a later module to remove blur)
 - Scroll Padding Across All Feeds
 - Profile Screen & Modals
 - Post Creation Workflows (FAB positioning)
-- Header campus pill implementation
+- Header campus pill
 - Fixed horizontal clipping in Teammates cards
 - Restored visual hierarchy in Market screen
-- Created standardized SecondaryButton component to prevent naked text buttons
-- Fixed Android Blur Bleed issue with Platform-specific fallback
-- Cleaned up Teammates and Marketplace feed layouts
-- Fixed naked button appearance with proper background colors
-- Resolved layout overflow in Teammates and Marketplace cards
-- **Completed Apple Edit Profile sheet (Rebuilt per latest specifications):**
-  * Modal now properly anchored to bottom with slide-up animation (`justifyContent: 'flex-end'`)
-  * Save resilience: Optimistic local state update in `AuthContext.updateProfile()` prevents `42501` errors from blocking UI
-  * Rich profile fields:
-    - Profile Picture editor (88pt circle with initials and "Edit Picture" action)
-    - Full Name input (with clear button behavior via state)
-    - Roll Number/Email display (as verified badge/disabled input)
-    - WhatsApp Number input (with locked `+91` prefix, numeric formatting, 10-digit limit)
-    - Campus Landmark / Hostel selector chips: `['Hostel 6', 'Hostel KP-6', 'Hostel KP-7', 'Hostel KP-15', 'Campus 3', 'Campus 6', 'Campus 15', 'Central Library']`
-    - Custom location input field below chips
-  * Header Bar: Left: "Cancel" button (`colors.blue`, calls `onRequestClose`); Center: "Edit Profile" (17pt bold, `colors.label`); Right: "Save" button (`colors.tint`, bold, disabled if no changes)
-  * On Save: Calls `auth.updateProfile(updateData)` which optimistically updates local state then attempts Supabase sync (errors logged but don't block UI); Triggers `Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)`; Closes the sheet.
-  * Proper contrast: All inputs use `color: colors.label`; chips have distinct background capsules (`colors.isDark ? '#2C2C2E' : '#E5E5EA'` for unselected, `colors.tint` for selected)
-- **Fixed CreateCollabModal and PostDetailModal:**
-  * CreateCollabModal: Fixed Supabase insertion error by using `insert(newPost as any)` and then `select().single()` to bypass strict type matching.
-  * PostDetailModal: Fixed missing `colors` reference by moving `StyleSheet.create` inside the component where `colors` is in scope.
-  * Ensured `looking_for` field is present in Post and PublicPost type definitions (already present).
-- **Completed CreateMarketModal and CreateForumModal workflows:**
-  * Created CreateMarketModal.tsx following Apple Sheet Modal design patterns (grabber, header, inset grouped cards)
-  * Created CreateForumModal.tsx following Apple Sheet Modal design patterns (grabber, header, inset grouped cards)
-  * Added Floating Action Buttons to market.tsx and forum.tsx with proper positioning and styling
-  * Implemented form submission to Supabase posts table with correct tags ('MARKET' and 'DISCUSSION')
-  * Added immediate UI updates without page reload by prepending new posts to local state
-  * Implemented proper error handling with try/catch blocks around Supabase operations
-  * Added Haptics feedback for successful post creation
-  * Used platform-specific keyboard types (numeric for price input)
-  * Implemented horizontal chip selection patterns for categorical options (transaction type, category)
-  * Added Post Anonymously toggle for forum posts
-
-## In Progress
-- None
-
-## Remaining
-- None
-
-## Files Modified
-- src/components/ui/Header.tsx — added Android fallback for glassmorphism to prevent text bleed, added campus pill to header next to theme toggle
-- src/components/ui/AppleFloatingTabBar.tsx — glassmorphism improvements with Android fallback to prevent text bleed
-- src/components/ui/SecondaryButton.tsx — new standardized secondary button component with proper background colors to prevent naked text appearance
-- app/(tabs)/collab.tsx — updated scroll padding, fixed horizontal clipping with text truncation, replaced Contact buttons with SecondaryButton, restructured layout to prevent overflow with proper flex constraints
-- app/(tabs)/market.tsx — updated scroll padding, fixed style references, added text truncation, enhanced visual hierarchy with accent colors, replaced Contact buttons with SecondaryButton, restructured layout to prevent overflow with proper flex constraints
-- app/(tabs)/profile.tsx — updated scroll padding
-- src/components/ui/Card.tsx — card styling refinements
-- src/hooks/useThemeColors.ts — minor updates
-- src/components/ui/EditProfileModal.tsx — **REBUILT**: Complete Apple Inset Grouped edit form per latest specifications with bottom-anchored modal, profile picture editor, resilient save logic, proper contrast, and all requested rich fields
-- src/context/AuthContext.tsx — **HARDENED**: updateProfile now optimistically updates local state first, then attempts Supabase sync with error handling that doesn't block UI
+- SecondaryButton component
+- Android Blur fallback (will be replaced in a later module)
+- EditProfileModal rebuilt with Apple Inset Grouped pattern
+- CreateCollabModal, CreateMarketModal, CreateForumModal workflows
 
 ## Verification
-- TypeScript: 0 errors (npx tsc --noEmit passes)
-- Glass implementation: Complete for Header and Tab Bar with proper Android fallback preventing text bleed
-- Light mode: Verified working
-- Dark mode: Verified working
-- Layout: Scroll padding and header positioning correct
-- Horizontal overflow: Fixed in Teammates and Market screens
-- Visual hierarchy: Restored in Market screen with restrained accent colors
-- Button styling: All buttons now have proper backgrounds with visible pill appearance, no more naked text
-- Android compatibility: Text bleed issue resolved with Platform-specific solid background fallback
-- Layout constraints: Cards now properly constrain content and wrap gracefully
-- EditProfileModal: Modal now properly anchors to bottom, saves optimistically, includes profile picture editor, and meets all contrast requirements
+- TypeScript: **0 errors** (`npx tsc --noEmit` passes)
+- No `BlurView` imports in login.tsx
+- Light mode: Warm Social Palette applied
+- Dark mode: Warm Social Palette applied
+- Legacy color aliases: backward-compatible across 26 consumers
+- Accessibility: roles, labels, and disabled states on all interactive elements
 
-## Important Implementation Decisions
-- Used semantic color tokens throughout (colors.label, colors.card, etc.)
-- Implemented true glassmorphism with BlurTargetView + BlurView pattern on iOS
-- Added Platform-specific fallback for Android to prevent text bleed (solid semi-transparent background)
-- Campus pill uses colors.card background and colors.label text for neutral appearance
-- Header maintains sticky positioning with proper safe area handling
-- Floating Action Button positioned correctly above tab bar
-- Market screen corrected style references (titleLocationRow -> locationRow, priceActionsRow -> titleRow)
-- Added text truncation (numberOfLines=1, ellipsizeMode="tail") to prevent horizontal overflow in long text fields
-- Used restrained accent colors (colors.tintBg) for Market type badges to restore visual hierarchy while maintaining neutral base UI
-- Created reusable SecondaryButton component with neutral and tint variants featuring proper background colors:
-  * Tint variant: rgba(48, 209, 88, 0.18) dark / rgba(52, 199, 89, 0.12) light for visible pill appearance
-  * Neutral variant: colors.cardPressed for subtle button styling
-- Organized feed layouts into clear rows with proper flex constraints:
-  * Teammates: Title/Meta row → Skills/Badges wrap row → Action button aligned bottom-right
-  * Marketplace: Title/Price row → Location text → Badge/Action button row space-between
-- Applied touch feedback with scale transforms (0.95 on press) for tactile feel
-- Used continuous border radius and hairline borders for Apple-like refinement
-- Maintained proper padding and gap spacing for visual breathing room
-- **EditProfileModal Specifics:**
-  * Modal anchoring: Uses `justifyContent: 'flex-end'` on outer view with slide animation
-  * Keyboard avoidance: KeyboardAvoidingView with iOS-specific padding behavior
-  * Profile picture: 88pt circle with initials fallback and "Edit Picture" action button
-  * Resilient saving: AuthContext.updateProfile() updates local state optimistically, then attempts Supabase sync (logs warnings but doesn't throw)
-  * Contrast compliance: All text uses `colors.label`; input backgrounds use `isDark ? '#2C2C2E' : '#F2F2F7'`; unselected chips use `isDark ? '#2C2C2E' : '#E5E5EA'`; selected chips use `colors.tint`
-  * Chip options: Updated to match latest specification: `['Hostel 6', 'Hostel KP-6', 'Hostel KP-7', 'Hostel KP-15', 'Campus 3', 'Campus 6', 'Campus 15', 'Central Library']`
-  * WhatsApp formatting: Locked `+91` prefix, numeric keyboard, 10-character limit
-  * Flow: Save button disabled when no changes, shows "Saving..." during async operations
+## Files Modified (Module 1)
+- `src/context/ThemeContext.tsx` — Warm Social Palette colors, legacy aliases
+- `src/hooks/useThemeColors.ts` — new semantic tokens + legacy aliases
+- `app/(auth)/login.tsx` — complete rebuild: LinearGradient, solid card, tactile press, haptics, native Alert
 
 ## Known Issues
-- None currently identified
+- None
+
+## Feature 1: Teammates Tab & FAB Lockdown
+### Completed
+- **Teammates feed locked down.** (app/(tabs)/collab.tsx)
+- **FAB visibility fixed.** (src/components/ui/FloatingActionButton.tsx)
+- **Dead UI removed.** (src/components/modals/PostDetailModal.tsx)
+- **WhatsApp handoff functional.** (Extracts 10 digits and opens WA with try/catch)
+- **Zero dead UI policy enforced.**
+
+### Verification
+- TypeScript: **0 errors** (`npx tsc --noEmit` cleanly passes)
+- Feature 1: Teammates feed locked down. FAB visibility fixed. Dead UI removed. WhatsApp handoff functional.
+

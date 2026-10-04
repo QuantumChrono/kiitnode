@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { MessageCircle, EyeOff, ThumbsUp } from 'lucide-react-native';
+import { MessageCircle, ThumbsUp, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthContextType } from '@/context/AuthContext';
-import { AppleButton } from '@/components/ui/AppleButton';
+import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import PostDetailModal from '@/components/modals/PostDetailModal';
 import CreateForumModal from '@/components/modals/CreateForumModal';
+import * as Haptics from 'expo-haptics';
 
 interface Post {
   id: string;
@@ -20,6 +21,7 @@ interface Post {
   likes: number;
   comments: number;
   category: string;
+  content?: string;
 }
 
 const SEED_POSTS: Post[] = [
@@ -32,16 +34,7 @@ const SEED_POSTS: Post[] = [
     likes: 24,
     comments: 8,
     category: 'Academic',
-  },
-  {
-    id: '2',
-    title: 'Robotics workshop this Saturday',
-    author: 'Sneha Mohanty',
-    campus: 'Campus 15',
-    isAnonymous: false,
-    likes: 18,
-    comments: 5,
-    category: 'Events',
+    content: 'Final exams are approaching. I have compiled all my notes from the last 3 semesters into a Drive link. Drop your links below and let\'s help each other out!'
   },
   {
     id: '3',
@@ -52,8 +45,114 @@ const SEED_POSTS: Post[] = [
     likes: 42,
     comments: 15,
     category: 'Campus',
+    content: 'Is anyone else experiencing multiple power cuts every day this week? It is making it impossible to focus on assignments.'
   },
 ];
+
+function ForumCard({ post, onPress }: { post: Post, onPress: () => void }) {
+  const colors = useThemeColors();
+  const [isUpvoted, setIsUpvoted] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes);
+
+  const toggleUpvote = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsUpvoted(!isUpvoted);
+    setLikesCount(prev => isUpvoted ? prev - 1 : prev + 1);
+  };
+
+  const handleCommentPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  return (
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      style={({ pressed }) => pressed && styles.cardPressed}
+    >
+      <Card style={{ padding: 16, gap: 12, backgroundColor: colors.card }}>
+        {/* Header Row: Avatar, Author Name, Metadata */}
+        <View style={styles.headerRow}>
+          <View style={[styles.avatar, { backgroundColor: colors.tintBg }]}>
+            {post.isAnonymous ? (
+              <EyeOff size={18} color={colors.tint} />
+            ) : (
+              <Text style={[styles.avatarText, { color: colors.tint }]}>
+                {(post.author || 'A').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </Text>
+            )}
+          </View>
+          <View style={styles.headerTextInfo}>
+            <Text style={[styles.authorName, { color: colors.label }]}>
+              {post.isAnonymous ? 'Anonymous Student' : post.author}
+            </Text>
+            <Text style={[styles.metadata, { color: colors.secondaryLabel }]}>
+              {post.isAnonymous ? 'Hidden Location' : post.campus}
+            </Text>
+          </View>
+        </View>
+
+        {/* Body: Title, Description */}
+        <View style={styles.bodyBlock}>
+          <Text style={[styles.postTitle, { color: colors.label }]}>
+            {post.title}
+          </Text>
+          {post.content && (
+            <Text style={[styles.postDesc, { color: colors.secondaryLabel }]} numberOfLines={3}>
+              {post.content}
+            </Text>
+          )}
+        </View>
+
+        {/* Tags/Category */}
+        <View style={styles.tagsContainer}>
+          <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+            <Text style={[styles.tagText, { color: colors.label }]}>{post.category}</Text>
+          </View>
+        </View>
+
+        {/* Social Action Bar */}
+        <View style={[styles.actionBar, { borderTopColor: colors.separator }]}>
+          <View style={styles.actionLeftGroup}>
+            <Pressable
+              onPress={toggleUpvote}
+              style={({ pressed }) => [
+                styles.actionItem,
+                { transform: [{ scale: pressed ? 0.9 : 1 }] }
+              ]}
+              hitSlop={8}
+            >
+              <ThumbsUp size={18} color={isUpvoted ? colors.tint : colors.secondaryLabel} />
+              <Text style={[
+                styles.actionItemText,
+                { color: isUpvoted ? colors.tint : colors.secondaryLabel }
+              ]}>
+                {likesCount}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleCommentPress}
+              style={({ pressed }) => [
+                styles.actionItem,
+                { transform: [{ scale: pressed ? 0.9 : 1 }] }
+              ]}
+              hitSlop={8}
+            >
+              <MessageCircle size={18} color={colors.secondaryLabel} />
+              <Text style={[styles.actionItemText, { color: colors.secondaryLabel }]}>
+                {post.comments}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
 
 export default function ForumScreen() {
   const insets = useSafeAreaInsets();
@@ -61,15 +160,7 @@ export default function ForumScreen() {
   const auth = useAuth() as AuthContextType;
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
-
-  const getCategoryVariant = (category: string) => {
-    switch (category) {
-      case 'Academic': return 'blue';
-      case 'Events': return 'amber';
-      case 'Campus': return 'violet';
-      default: return 'slate';
-    }
-  };
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -77,86 +168,33 @@ export default function ForumScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 64,
-          paddingBottom: insets.bottom + 130,
+          paddingTop: insets.top + 56,
+          paddingBottom: 160,
           paddingHorizontal: 16,
+          gap: 16
         }}
       >
-        {/* Large Title */}
-        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 16 }]}>Forum</Text>
+        <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 0 }]}>Forum</Text>
 
-        {/* Seed Posts */}
         <View style={styles.postsContainer}>
           {posts.map((post) => (
-            <Card key={post.id} style={styles.postCard}>
-              {/* Category Badge */}
-              <View style={styles.categoryRow}>
-                <Badge variant={getCategoryVariant(post.category)}>{post.category}</Badge>
-              </View>
-
-              {/* Title */}
-              <Text style={[styles.postTitle, { color: colors.label }]}>
-                {post.title}
-              </Text>
-
-              {/* Author / Anonymous */}
-              <View style={styles.authorRow}>
-                {post.isAnonymous ? (
-                  <View style={styles.anonymousContainer}>
-                    <EyeOff size={14} color={colors.secondaryLabel} />
-                    <Text style={[styles.anonymousText, { color: colors.secondaryLabel }]}>
-                      Anonymous Student
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={[styles.authorText, { color: colors.secondaryLabel }]}>
-                    {post.author} • {post.campus}
-                  </Text>
-                )}
-              </View>
-
-              {/* Engagement Row */}
-              <View style={styles.engagementRow}>
-                <Pressable style={styles.engagementButton}>
-                  <ThumbsUp size={14} color={colors.secondaryLabel} />
-                  <Text style={[styles.engagementText, { color: colors.secondaryLabel }]}>
-                    {post.likes}
-                  </Text>
-                </Pressable>
-                <Pressable style={styles.engagementButton}>
-                  <MessageCircle size={14} color={colors.secondaryLabel} />
-                  <Text style={[styles.engagementText, { color: colors.secondaryLabel }]}>
-                    {post.comments}
-                  </Text>
-                </Pressable>
-              </View>
-            </Card>
+            <ForumCard
+              key={post.id}
+              post={post}
+              onPress={() => setSelectedPost(post)}
+            />
           ))}
         </View>
       </ScrollView>
 
-      {/* Floating Action Button */}
-      <AppleButton
-        title="Create Forum Post"
-        icon={MessageCircle}
-        variant="primary"
-        onPress={() => setIsCreateModalVisible(true)}
-        style={{
-          position: 'absolute',
-          bottom: 24 + insets.bottom,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-        }}
-      />
+      {selectedPost && (
+        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
 
-      {/* Create Forum Modal */}
       <CreateForumModal
         visible={isCreateModalVisible}
         onRequestClose={() => setIsCreateModalVisible(false)}
         onPostCreated={(newPost) => {
-          // Convert Supabase post to forum post format and prepend to local state
           const newForumPost: Post = {
             id: newPost.id,
             title: newPost.title,
@@ -167,74 +205,56 @@ export default function ForumScreen() {
             comments: 0,
             category: newPost.content.includes('Academic') || newPost.content.includes('academic') ? 'Academic' :
                      newPost.content.includes('Events') || newPost.content.includes('events') ? 'Events' : 'Campus',
+            content: newPost.content
           };
-
-          // Prepend the new post to the posts list for immediate display
           setPosts([newForumPost, ...posts]);
           setIsCreateModalVisible(false);
         }}
       />
+
+      <FloatingActionButton onPress={() => setIsCreateModalVisible(true)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  largeTitle: {
-    fontSize: 34,
-    fontWeight: '700',
-    letterSpacing: 0.37,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  postsContainer: {
-    gap: 12,
-  },
-  postCard: {
-    padding: 16,
-    gap: 8,
-  },
-  categoryRow: {
+  container: { flex: 1 },
+  largeTitle: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 },
+  postsContainer: { gap: 16 },
+  cardPressed: { opacity: 0.92 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 16, fontWeight: '600' },
+  headerTextInfo: { flex: 1 },
+  authorName: { fontSize: 16, fontWeight: '600' },
+  metadata: { fontSize: 13, fontWeight: '400', marginTop: 2 },
+  bodyBlock: { gap: 6 },
+  postTitle: { fontSize: 17, fontWeight: '700' },
+  postDesc: { fontSize: 15, lineHeight: 20 },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignSelf: 'flex-start' },
+  tagPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tagText: { fontSize: 13, fontWeight: '500' },
+  actionBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  postTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.41,
-    lineHeight: 22,
-  },
-  authorRow: {
-    marginTop: 4,
-  },
-  authorText: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: -0.24,
-  },
-  anonymousContainer: {
+  actionLeftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  anonymousText: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: -0.24,
-  },
-  engagementRow: {
-    flexDirection: 'row',
     gap: 16,
-    marginTop: 8,
   },
-  engagementButton: {
+  actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
-  engagementText: {
-    fontSize: 13,
-    fontWeight: '400',
-  },
+  actionItemText: {
+    fontSize: 14,
+    fontWeight: '600',
+  }
 });

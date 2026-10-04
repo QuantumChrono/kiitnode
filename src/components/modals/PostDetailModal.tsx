@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, TouchableWithoutFeedback, FlatList } from 'react-native';
-import { Info as InfoIcon, MapPin as MapPinIcon, MessageCircle as MessageCircleIcon } from 'lucide-react-native';
+import { View, Text, StyleSheet, Pressable, Modal, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { MapPin as MapPinIcon, MessageCircle as MessageCircleIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { Avatar } from '@/components/ui/Avatar';
+import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
 interface PostDetailModalProps {
@@ -11,12 +13,17 @@ interface PostDetailModalProps {
     title: string;
     author?: string;
     campus?: string;
+    location?: string;
     skills?: string[];
     seriousness_level?: string;
     weekly_bandwidth?: string;
     whatsapp?: string;
     looking_for?: string;
     content?: string;
+    price?: string;
+    type?: string;
+    category?: string;
+    likes?: number;
   };
   onClose: () => void;
 }
@@ -25,174 +32,22 @@ export default function PostDetailModal({ post, onClose }: PostDetailModalProps)
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
 
-  // Determine if it's a collab post (has skills) or market listing (has price)
-  const isCollab = !!post.skills;
+  const getAuthorName = () => post.author && post.author.trim() !== '' ? post.author : 'Anonymous';
+  const getLocation = () => post.campus || post.location || 'KIIT Campus';
 
   const openWhatsApp = () => {
     if (post.whatsapp) {
-      const cleanPhone = post.whatsapp.replace(/\D/g, '');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const cleanPhone = post.whatsapp.replace(/\D/g, '').slice(-10);
       const message = `Hey ${post.author || 'there'}, saw your post about "${post.title}" on KIIT Node!`;
       const encodedMessage = encodeURIComponent(message);
-      // Using WhatsApp URL scheme
-      Linking.openURL(`whatsapp://send?phone=${cleanPhone}&text=${encodedMessage}`)
+      Linking.openURL(`whatsapp://send?phone=91${cleanPhone}&text=${encodedMessage}`)
         .catch(err => {
           console.error('Failed to open WhatsApp:', err);
-          // Fallback to alert if WhatsApp is not installed
-          alert(`Opening WhatsApp for ${cleanPhone}\nMessage: ${message}`);
+          alert(`Could not open WhatsApp for ${cleanPhone}`);
         });
     }
   };
-
-  const styles = StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'flex-end',
-      paddingBottom: 20,
-    },
-    backdropOverlay: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'transparent',
-    },
-    modalContent: {
-      backgroundColor: colors.card,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      borderCurve: 'continuous',
-      padding: 24,
-      maxHeight: '85%',
-    },
-    grabber: {
-      width: 36,
-      height: 5,
-      borderRadius: 2.5,
-      backgroundColor: colors.tertiaryLabel,
-      alignSelf: 'center',
-      marginVertical: 12,
-    },
-    header: {
-      marginBottom: 20,
-    },
-    title: {
-      fontSize: 34,
-      fontWeight: '700',
-      color: colors.label,
-      letterSpacing: 0.37,
-    },
-    authorBlock: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-      marginBottom: 24,
-    },
-    authorAvatar: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.tintBg,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.separator,
-    },
-    authorAvatarText: {
-      fontSize: 24,
-      fontWeight: '600',
-      color: colors.tint,
-    },
-    authorInfo: {
-      gap: 4,
-    },
-    authorName: {
-      fontSize: 17,
-      fontWeight: '600',
-      color: colors.label,
-    },
-    authorLocation: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    authorLocationText: {
-      fontSize: 14,
-      color: colors.secondaryLabel,
-    },
-    contentBlock: {
-      paddingVertical: 16,
-    },
-    contentText: {
-      fontSize: 16,
-      color: colors.secondaryLabel,
-      lineHeight: 24,
-    },
-    metaBlock: {
-      gap: 12,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 12,
-      paddingHorizontal: 0,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.separator,
-    },
-    metaLabel: {
-      fontSize: 15,
-      color: colors.secondaryLabel,
-      fontWeight: '500',
-    },
-    metaValue: {
-      fontSize: 15,
-      color: colors.label,
-      fontWeight: '500',
-      textAlign: 'right',
-    },
-    skillsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    skillChip: {
-      backgroundColor: colors.isDark ? '#2C2C2E' : '#F2F2F7',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.separator,
-    },
-    skillChipText: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: colors.label,
-    },
-    whatsappContainer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.bg,
-      padding: 16,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.separator,
-    },
-    whatsappButton: {
-      backgroundColor: colors.tint,
-      borderRadius: 14,
-      paddingVertical: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    whatsappButtonContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    whatsappButtonText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: '#FFFFFF',
-    },
-  });
 
   return (
     <Modal
@@ -208,101 +63,187 @@ export default function PostDetailModal({ post, onClose }: PostDetailModalProps)
           <View style={styles.backdropOverlay} />
         </TouchableWithoutFeedback>
 
-        <View style={styles.modalContent}>
+        <View
+           style={[styles.modalContainer, { backgroundColor: colors.bg, paddingBottom: insets.bottom }]}
+        >
           {/* Top grabber pill */}
-          <View style={styles.grabber} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{post.title}</Text>
+          <View style={styles.grabberWrapper}>
+             <View style={[styles.grabber, { backgroundColor: colors.tertiaryLabel }]} />
           </View>
 
-          {/* Author Block */}
-          {post.author && (
-            <View style={styles.authorBlock}>
-              <View style={styles.authorAvatar}>
-                <Text style={styles.authorAvatarText}>
-                  {post.author.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
-                </Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={styles.contentWrapper}>
+              {/* Thread Author line */}
+              <View style={styles.threadHeaderInfo}>
+                <Avatar name={getAuthorName()} size={36} />
+                <View style={styles.threadHeaderMeta}>
+                  <Text style={[styles.threadAuthorName, { color: colors.label }]}>{getAuthorName()}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <MapPinIcon size={12} color={colors.secondaryLabel} />
+                    <Text style={[styles.threadLocation, { color: colors.secondaryLabel }]}>{getLocation()}</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{post.author}</Text>
-                {post.campus && (
-                  <View style={styles.authorLocation}>
-                    <MapPinIcon size={14} color={colors.secondaryLabel} />
-                    <Text style={styles.authorLocationText}>{post.campus}</Text>
+
+              {/* Title */}
+              <Text style={[styles.title, { color: colors.label }]}>{post.title}</Text>
+
+              {/* Tags / Pills */}
+              <View style={styles.tagsContainer}>
+                {post.category && (
+                  <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                    <Text style={[styles.tagText, { color: colors.label }]}>{post.category}</Text>
                   </View>
                 )}
-              </View>
-            </View>
-          )}
-
-          {/* Content Block */}
-          {post.content && (
-            <View style={styles.contentBlock}>
-              <Text style={styles.contentText}>{post.content}</Text>
-            </View>
-          )}
-
-          {/* Meta Block (Grouped List) */}
-          <View style={styles.metaBlock}>
-            {/* Looking For */}
-            {post.looking_for && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Looking For</Text>
-                <Text style={styles.metaValue}>{post.looking_for}</Text>
-              </View>
-            )}
-
-            {/* Seriousness */}
-            {post.seriousness_level && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Seriousness</Text>
-                <Text style={styles.metaValue}>{post.seriousness_level}</Text>
-              </View>
-            )}
-
-            {/* Bandwidth */}
-            {post.weekly_bandwidth && (
-              <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Bandwidth</Text>
-                <Text style={styles.metaValue}>{post.weekly_bandwidth}</Text>
-              </View>
-            )}
-
-            {/* Skills */}
-            {post.skills && post.skills.length > 0 && (
-              <>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>Skills</Text>
-                  <View style={styles.skillsContainer}>
-                    {post.skills.map((skill, index) => (
-                      <View key={index} style={styles.skillChip}>
-                        <Text style={styles.skillChipText}>{skill}</Text>
-                      </View>
-                    ))}
+                {post.price && (
+                  <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                    <Text style={[styles.tagText, { color: colors.label }]}>{post.price}</Text>
                   </View>
-                </View>
-              </>
-            )}
-          </View>
+                )}
+                {post.type && (
+                    <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                      <Text style={[styles.tagText, { color: colors.label, textTransform: 'capitalize' }]}>{post.type}</Text>
+                    </View>
+                )}
+                {post.looking_for && (
+                  <View style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                    <Text style={[styles.tagText, { color: colors.label }]}>Needs: {post.looking_for}</Text>
+                  </View>
+                )}
+                {post.skills?.map((skill, idx) => (
+                  <View key={idx} style={[styles.tagPill, { backgroundColor: colors.cardPressed }]}>
+                     <Text style={[styles.tagText, { color: colors.label }]}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
 
-          {/* Sticky Bottom Action */}
-          {post.whatsapp && (
-            <View style={styles.whatsappContainer}>
-              <Pressable
-                style={styles.whatsappButton}
-                onPress={openWhatsApp}
-              >
-                <View style={styles.whatsappButtonContent}>
-                  <MessageCircleIcon size={20} color="#FFFFFF" />
-                  <Text style={styles.whatsappButtonText}>Connect on WhatsApp</Text>
+              {/* Content */}
+              <View style={styles.contentBlock}>
+                <Text style={[styles.contentText, { color: colors.label }]}>{post.content}</Text>
+              </View>
+
+              {/* Special actions like whatsapp */}
+              {post.whatsapp && (
+                <View style={styles.whatsappContainer}>
+                    <Pressable
+                        onPress={openWhatsApp}
+                        style={({ pressed }) => [
+                        styles.whatsappButton,
+                        {
+                            backgroundColor: colors.tint,
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
+                            opacity: pressed ? 0.8 : 1
+                        }
+                        ]}
+                    >
+                        <MessageCircleIcon size={18} color="#FFFFFF" />
+                        <Text style={styles.whatsappButtonText}>Connect on WhatsApp</Text>
+                    </Pressable>
                 </View>
-              </Pressable>
+              )}
             </View>
-          )}
+          </ScrollView>
         </View>
       </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'transparent',
+  },
+  modalContainer: {
+    maxHeight: '80%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  grabberWrapper: {
+    paddingTop: 12,
+    paddingBottom: 12,
+    alignItems: 'center',
+  },
+  grabber: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  contentWrapper: {
+    paddingTop: 8,
+  },
+  threadHeaderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  threadHeaderMeta: {
+    justifyContent: 'center',
+  },
+  threadAuthorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  threadLocation: {
+    fontSize: 13,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  tagPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  tagText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  contentBlock: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  contentText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  whatsappContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  whatsappButton: {
+    borderRadius: 12,
+    borderCurve: 'continuous',
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  whatsappButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});
