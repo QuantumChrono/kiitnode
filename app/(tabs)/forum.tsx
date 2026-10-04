@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/Badge';
 import { MessageCircle, EyeOff, ThumbsUp } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthContextType } from '@/context/AuthContext';
+import { AppleButton } from '@/components/ui/AppleButton';
+import CreateForumModal from '@/components/modals/CreateForumModal';
 
 interface Post {
   id: string;
@@ -54,6 +58,9 @@ const SEED_POSTS: Post[] = [
 export default function ForumScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const auth = useAuth() as AuthContextType;
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
 
   const getCategoryVariant = (category: string) => {
     switch (category) {
@@ -80,7 +87,7 @@ export default function ForumScreen() {
 
         {/* Seed Posts */}
         <View style={styles.postsContainer}>
-          {SEED_POSTS.map((post) => (
+          {posts.map((post) => (
             <Card key={post.id} style={styles.postCard}>
               {/* Category Badge */}
               <View style={styles.categoryRow}>
@@ -127,6 +134,46 @@ export default function ForumScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Floating Action Button */}
+      <AppleButton
+        title="Create Forum Post"
+        icon={MessageCircle}
+        variant="primary"
+        onPress={() => setIsCreateModalVisible(true)}
+        style={{
+          position: 'absolute',
+          bottom: 24 + insets.bottom,
+          right: 24,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+        }}
+      />
+
+      {/* Create Forum Modal */}
+      <CreateForumModal
+        visible={isCreateModalVisible}
+        onRequestClose={() => setIsCreateModalVisible(false)}
+        onPostCreated={(newPost) => {
+          // Convert Supabase post to forum post format and prepend to local state
+          const newForumPost: Post = {
+            id: newPost.id,
+            title: newPost.title,
+            author: newPost.is_anonymous ? '' : (auth.profile?.full_name || 'Current User'),
+            campus: newPost.location_tag || '',
+            isAnonymous: newPost.is_anonymous,
+            likes: 0,
+            comments: 0,
+            category: newPost.content.includes('Academic') || newPost.content.includes('academic') ? 'Academic' :
+                     newPost.content.includes('Events') || newPost.content.includes('events') ? 'Events' : 'Campus',
+          };
+
+          // Prepend the new post to the posts list for immediate display
+          setPosts([newForumPost, ...posts]);
+          setIsCreateModalVisible(false);
+        }}
+      />
     </View>
   );
 }

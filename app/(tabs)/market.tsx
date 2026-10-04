@@ -9,6 +9,7 @@ import * as Linking from 'expo-linking';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { AppleButton } from '@/components/ui/AppleButton';
 import PostDetailModal from '@/components/modals/PostDetailModal';
+import CreateMarketModal from '@/components/modals/CreateMarketModal';
 
 interface Listing {
   id: string;
@@ -58,6 +59,8 @@ export default function MarketScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const [selectedPost, setSelectedPost] = useState<Listing | null>(null);
+  const [seedListings, setSeedListings] = useState<Listing[]>(SEED_LISTINGS);
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
   const handleWhatsApp = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -80,7 +83,7 @@ export default function MarketScreen() {
 
         {/* Seed Listings */}
         <View style={styles.listingsContainer}>
-          {SEED_LISTINGS.map((listing) => (
+          {seedListings.map((listing) => (
             <Card key={listing.id} style={{ padding: 16, gap: 12 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                 <Text style={{ fontSize: 17, fontWeight: '600', color: colors.label, flex: 1, flexWrap: 'wrap' }}>
@@ -140,6 +143,45 @@ export default function MarketScreen() {
       {selectedPost && (
         <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
       )}
+
+      {/* Floating Action Button */}
+      <AppleButton
+        title="Create Market Post"
+        icon={MessageCircle} // Using MessageCircle as a placeholder for create icon
+        variant="primary"
+        onPress={() => setIsCreateModalVisible(true)}
+        style={{
+          position: 'absolute',
+          bottom: 24 + insets.bottom,
+          right: 24,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+        }}
+      />
+
+      {/* Create Market Modal */}
+      <CreateMarketModal
+        visible={isCreateModalVisible}
+        onRequestClose={() => setIsCreateModalVisible(false)}
+        onPostCreated={(newPost) => {
+          // Prepend the new post to the seed listings for immediate display
+          // Convert the new post from Supabase to our Listing format
+          const newListing: Listing = {
+            id: newPost.id,
+            title: newPost.title,
+            price: `₹${newPost.content}`, // Price is stored in content field for market
+            location: newPost.location_tag || 'Campus Location',
+            type: newPost.content.toLowerCase().includes('/mo') ? 'renting' :
+                   newPost.content.toLowerCase().includes('buy') || newPost.content.toLowerCase().includes('purchase') ? 'buying' : 'selling',
+            whatsapp: newPost.user_id ? '919999999999' : undefined // Placeholder - in real app would get from user profile
+          };
+
+          // Update seed listings with new post at the beginning
+          setSeedListings([newListing, ...seedListings]);
+          setIsCreateModalVisible(false);
+        }}
+      />
     </View>
   );
 }

@@ -51,6 +51,7 @@ export interface Post {
   moderation_score: Record<string, unknown> | null;
   is_active: boolean;
   created_at: string;
+  looking_for?: string;
 }
 
 /** Matches the posts_public view — identity fields are null when is_anonymous = true */
@@ -72,6 +73,7 @@ export interface PublicPost {
   sponsor_name: string | null;
   is_active: boolean;
   created_at: string;
+  looking_for?: string;
 }
 
 export interface Resource {

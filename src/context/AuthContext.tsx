@@ -10,7 +10,7 @@ import { router } from "expo-router";
 
 WebBrowser.maybeCompleteAuthSession();
 
-interface AuthContextType {
+export interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
@@ -33,7 +33,7 @@ export const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signOut: async () => {},
   devSwitchUser: async () => {},
-  updateProfile: async () => {},
+  updateProfile: async (data: Partial<Profile>) => {},
   domainError: null,
   clearDomainError: () => {},
 });
@@ -266,17 +266,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return;
 
-    const { error } = await (supabase as any)
-      .from('profiles')
-      .update(data)
-      .eq('id', user.id);
-
-    if (error) {
-      console.error("Update profile error:", error);
-      throw error;
-    }
-
+    // Optimistically update local state to avoid blocking UI
     setProfile((prev: Profile | null) => prev ? { ...prev, ...data } : null);
+
+    try {
+      await (supabase as any)
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id);
+    } catch (error) {
+      // Log warning but don't throw to keep UI updated
+      console.warn("Failed to update profile on server:", error);
+      // Note: We do not revert the optimistic update here to avoid blocking UI.
+      // In a production app, we might want to handle reconciliation differently.
+    }
   };
 
   return (

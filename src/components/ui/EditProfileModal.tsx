@@ -1,254 +1,182 @@
 import React, { useState } from "react";
-import { Modal, View, Text, Pressable, StyleSheet, Switch, TextInput } from "react-native";
+import { Modal, View, Text, Pressable, StyleSheet, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { Edit3, ChevronRight, CheckCircle2, LogOut, Sun, Moon } from "lucide-react-native";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthContextType } from "@/context/AuthContext";
+import * as Haptics from "expo-haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface EditProfileModalProps {
   visible: boolean;
   onRequestClose: () => void;
-  onAppearanceChange: (isDark: boolean) => void;
-  isDark: boolean;
+  onAppearanceChange?: (isDark: boolean) => void;
+  isDark?: boolean;
 }
 
-export default function EditProfileModal({
-  visible,
-  onRequestClose,
-  onAppearanceChange,
-  isDark,
-}: EditProfileModalProps) {
+export default function EditProfileModal({ visible, onRequestClose }: EditProfileModalProps) {
   const colors = useThemeColors();
-  const { updateProfile, profile } = useAuth();
+  const auth = useAuth() as AuthContextType;
+  const insets = useSafeAreaInsets();
 
-  const [fullName, setFullName] = useState(profile?.full_name ?? '');
-  const [whatsappNumber, setWhatsAppNumber] = useState(profile?.whatsapp_number ?? '');
-  const [campusLocation, setCampusLocation] = useState(profile?.campus_location ?? '');
+  if (!auth.profile) return null;
+
+  const profile = auth.profile;
+  const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const [whatsappNumber, setWhatsAppNumber] = useState(profile.whatsapp_number ?? "");
+  const [campusLocation, setCampusLocation] = useState(profile.campus_location ?? "");
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const options = ["Hostel 6", "Hostel KP-6", "Hostel KP-7", "Hostel KP-15", "Campus 3", "Campus 6", "Campus 15", "Central Library"];
+
+  const hasChanges = fullName.trim() !== profile.full_name || whatsappNumber.trim() !== (profile.whatsapp_number ?? "") || campusLocation.trim() !== (profile.campus_location ?? "");
+
+  const getInitials = (name: string) => name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   const handleSave = async () => {
     setIsSaving(true);
-    setSaveError(null);
-
     try {
-      await updateProfile({
+      const updateData = {
         full_name: fullName.trim(),
         whatsapp_number: whatsappNumber.trim(),
         campus_location: campusLocation.trim(),
-      });
+      };
+      await auth.updateProfile(updateData);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRequestClose();
-    } catch (error: any) {
-      setSaveError(error.message || 'Failed to save profile');
+    } catch (error) {
+      console.error("Save error:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <Modal
-      transparent={true}
-      visible={visible}
-      onRequestClose={onRequestClose}
-      animationType="fade"
-      statusBarTranslucent
-      supportedOrientations={["portrait"]}
-    >
-      <Pressable style={styles.backdrop} onPress={onRequestClose}>
-        <View style={[styles.container, { backgroundColor: colors.isDark ? '#1C1C1E' : '#FFFFFF' }]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.label }]}>Edit Profile</Text>
-            <Pressable style={styles.closeButton} onPress={onRequestClose}>
-              <Text style={[styles.closeButtonText, { color: colors.label }]}>✕</Text>
-            </Pressable>
-          </View>
+    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onRequestClose} statusBarTranslucent>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
 
-          {/* Form Fields */}
-          <View style={styles.form}>
-            {/* Full Name */}
-            <View style={styles.inputRow}>
-              <Text style={[styles.inputLabel, { color: colors.secondaryLabel }]}>Full Name</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { color: colors.label },
-                ]}
-                placeholder="Enter your full name"
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-                placeholderTextColor={colors.tertiaryLabel}
-              />
+          {/* Dismiss scrim layer */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={onRequestClose} />
+
+          <View style={{
+            backgroundColor: colors.bg,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            borderCurve: "continuous",
+            paddingTop: 12,
+            paddingBottom: Math.max(insets.bottom, 24),
+            height: "90%",
+            overflow: "hidden"
+          }}>
+
+            {/* Grabber */}
+            <View style={{ width: 36, height: 5, borderRadius: 2.5, backgroundColor: colors.tertiaryLabel, alignSelf: "center", marginBottom: 12 }} />
+
+            {/* Header */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.separator }}>
+              <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onRequestClose(); }} hitSlop={10}>
+                <Text style={{ fontSize: 17, color: colors.blue }}>Cancel</Text>
+              </Pressable>
+              <Text style={{ fontSize: 17, fontWeight: "600", color: colors.label }}>Edit Profile</Text>
+              <Pressable onPress={handleSave} disabled={!hasChanges || isSaving} hitSlop={10}>
+                <Text style={{ fontSize: 17, fontWeight: "600", color: (!hasChanges || isSaving) ? colors.tertiaryLabel : colors.tint }}>
+                  {isSaving ? "Saving..." : "Save"}
+                </Text>
+              </Pressable>
             </View>
 
-            {/* WhatsApp Number */}
-            <View style={styles.inputRow}>
-              <Text style={[styles.inputLabel, { color: colors.secondaryLabel }]}>WhatsApp Number</Text>
-              <View style={styles.inputWithPrefix}>
-                <Text style={[styles.inputPrefix, { color: colors.secondaryLabel }]}>+91 </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    { flex: 1, color: colors.label },
-                  ]}
-                  placeholder="Enter 10-digit number"
-                  value={whatsappNumber}
-                  onChangeText={setWhatsAppNumber}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  placeholderTextColor={colors.tertiaryLabel}
-                />
+            {/* Content */}
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
+
+              {/* Avatar Section */}
+              <View style={{ alignItems: "center", marginVertical: 24 }}>
+                <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.tintBg, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 36, fontWeight: "600", color: colors.tint }}>{getInitials(profile.full_name ?? "")}</Text>
+                </View>
+                <Pressable style={{ marginTop: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "500", color: colors.blue }}>Edit Picture</Text>
+                </Pressable>
               </View>
-            </View>
 
-            {/* Campus / Hostel Location */}
-            <View style={styles.inputRow}>
-              <Text style={[styles.inputLabel, { color: colors.secondaryLabel }]}>Campus / Hostel Location</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: colors.label,
-                  }
-                ]}
-                placeholder="e.g. Hostel 6, Campus 15"
-                value={campusLocation}
-                onChangeText={setCampusLocation}
-                placeholderTextColor={colors.tertiaryLabel}
-              />
-            </View>
-          </View>
+              {/* Name & Email Section */}
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.secondaryLabel, textTransform: "uppercase", marginBottom: 6 }}>Full Name</Text>
+                <View style={{ backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <TextInput
+                    style={{ fontSize: 17, color: colors.label }}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Enter full name"
+                    placeholderTextColor={colors.tertiaryLabel}
+                  />
+                </View>
 
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+                <View style={{ marginTop: 12, paddingHorizontal: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.secondaryLabel, textTransform: "uppercase", marginBottom: 4 }}>Account Email</Text>
+                  <Text style={{ fontSize: 16, color: colors.tertiaryLabel }}>{profile.email || "Verified Student"}</Text>
+                </View>
+              </View>
 
-          {/* Error Message */}
-          {saveError && (
-            <View style={[styles.errorContainer, { backgroundColor: colors.isDark ? 'rgba(255, 0, 0, 0.1)' : 'rgba(255, 0, 0, 0.05)' }]}>
-              <Text style={[styles.errorText, { color: colors.isDark ? '#FF6B6B' : '#FF3B30' }]}>{saveError}</Text>
-            </View>
-          )}
+              {/* WhatsApp Section */}
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.secondaryLabel, textTransform: "uppercase", marginBottom: 6 }}>WhatsApp Coordination Number</Text>
+                <View style={{ backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 17, color: colors.label }}>+91 </Text>
+                  <TextInput
+                    style={{ fontSize: 17, color: colors.label, flex: 1 }}
+                    value={whatsappNumber}
+                    onChangeText={setWhatsAppNumber}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    placeholder="10-digit number"
+                    placeholderTextColor={colors.tertiaryLabel}
+                  />
+                </View>
+                <Text style={{ fontSize: 13, color: colors.secondaryLabel, marginTop: 6, paddingHorizontal: 4, lineHeight: 18 }}>
+                  Used for direct coordination in Marketplace and Collabs. Kept private on anonymous posts.
+                </Text>
+              </View>
 
-          {/* Actions */}
-          <View style={styles.actions}>
-            <Pressable
-              style={[
-                styles.actionItem,
-                { flex: 1, marginRight: 8 }
-              ]}
-              onPress={onRequestClose}
-              disabled={isSaving}
-            >
-              <Text style={[
-                styles.actionText,
-                { opacity: isSaving ? 0.5 : 1 }
-              ]}>
-                Cancel
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.actionItem,
-                { flex: 1, marginLeft: 8, backgroundColor: colors.tint }
-              ]}
-              onPress={handleSave}
-              disabled={isSaving || !fullName.trim()}
-            >
-              <Text style={[
-                styles.actionText,
-                { color: '#FFFFFF', opacity: isSaving ? 0.5 : 1 }
-              ]}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </Text>
-            </Pressable>
+              {/* Campus Section */}
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.secondaryLabel, textTransform: "uppercase", marginBottom: 6 }}>Campus Location / Hostel</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 8 }}>
+                  {options.map((option, index) => (
+                    <Pressable
+                      key={index}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        borderCurve: 'continuous',
+                        backgroundColor: campusLocation === option ? colors.tint : colors.cardPressed,
+                      }}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setCampusLocation(option);
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: campusLocation === option ? '600' : '400', color: campusLocation === option ? '#FFFFFF' : colors.label }}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                <View style={{ backgroundColor: colors.card, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, marginTop: 12 }}>
+                  <TextInput
+                    style={{ fontSize: 17, color: colors.label }}
+                    placeholder="Or type custom landmark"
+                    value={campusLocation}
+                    onChangeText={setCampusLocation}
+                    placeholderTextColor={colors.tertiaryLabel}
+                  />
+                </View>
+              </View>
+
+            </ScrollView>
           </View>
         </View>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    maxHeight: "80%",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  form: {
-    gap: 16,
-  },
-  inputRow: {
-    flexDirection: "column",
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  input: {
-    height: 48,
-    paddingHorizontal: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-  },
-  inputWithPrefix: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: 48,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-  },
-  inputPrefix: {
-    paddingHorizontal: 12,
-    fontSize: 16,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 20,
-  },
-  errorContainer: {
-    padding: 12,
-    borderRadius: 8,
-  },
-  errorText: {
-    fontSize: 14,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionItem: {
-    flex: 1,
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 12,
-  },
-  actionText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
