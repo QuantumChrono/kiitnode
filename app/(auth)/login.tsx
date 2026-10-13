@@ -1,260 +1,229 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Modal, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Alert, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@/context/ThemeContext';
-import { BlurView } from 'expo-blur';
+import { useThemeColors } from '@/hooks/useThemeColors';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+
+const DEV_ACCOUNTS = [
+  { email: '2205001@kiit.ac.in', name: 'Arjun', role: 'CSE' },
+  { email: '2205002@kiit.ac.in', name: 'Sneha', role: 'Mech' },
+  { email: '2205003@kiit.ac.in', name: 'Ravi', role: 'Mod' },
+];
 
 export default function LoginScreen() {
   const { signInWithGoogle, isLoading, devSwitchUser, domainError, clearDomainError } = useAuth();
-  const { colors, isDark } = useTheme();
+  const colors = useThemeColors();
+
+  // Show domain error as native alert
+  React.useEffect(() => {
+    if (domainError) {
+      Alert.alert('Access Denied', domainError, [
+        { text: 'OK', onPress: clearDomainError },
+      ]);
+    }
+  }, [domainError, clearDomainError]);
+
+  const handleSignIn = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    signInWithGoogle();
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? "#000000" : "#F2F2F7" }]}>
-      {/* Soft gradient background simulation */}
-      <View style={[
-        styles.gradientBg,
-        { backgroundColor: isDark ? "#1C1C1E" : "rgba(255,255,255,0.8)" }
-      ]} />
+    <View style={styles.root}>
+      <LinearGradient
+        colors={colors.isDark
+          ? ['#0E1116', '#064E3B', '#0E1116'] as const
+          : ['#F8F9FA', '#E8F5E9', '#F8F9FA'] as const}
+        style={StyleSheet.absoluteFill}
+        locations={[0, 0.5, 1]}
+      />
 
-      <SafeAreaView style={styles.content}>
-        {/* Header / Branding */}
-        <View style={styles.headerContainer}>
-          <View style={[styles.logoCircle, { backgroundColor: colors.green }]}>
-            <Text style={styles.logoText}>KN</Text>
-          </View>
-          <Text style={[styles.title, { color: colors.label }]}>KIIT Node</Text>
-          <Text style={[styles.subtitle, { color: colors.secondaryLabel }]}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Brand header */}
+        <View style={styles.header}>
+          <Text
+            style={[styles.brandTitle, { color: colors.label }]}
+            accessibilityRole="header"
+          >
+            KIIT Node
+          </Text>
+          <Text style={[styles.brandSubtitle, { color: colors.secondaryLabel }]}>
             The Verified Campus Network
           </Text>
         </View>
 
-        {/* Auth Box - Apple-style card */}
-        <View style={[styles.authCard, { backgroundColor: colors.card }]}>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.green }]}
-            onPress={signInWithGoogle}
+        {/* Auth card */}
+        <View style={[styles.authCard, {
+          backgroundColor: colors.card,
+          borderColor: colors.separator,
+        }]}>
+          {/* Primary CTA */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { backgroundColor: pressed ? colors.tintPressed : colors.tint },
+              { transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={handleSignIn}
             disabled={isLoading}
-            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with KIIT Mail"
+            accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.primaryButtonText}>Continue with KIIT Mail</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
 
-          <Text style={[styles.disclaimer, { color: colors.tertiaryLabel }]}>
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
+            <Text style={[styles.dividerText, { color: colors.tertiaryLabel }]}>or</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
+          </View>
+
+          {/* Disclaimer */}
+          <Text style={[styles.disclaimer, { color: colors.secondaryLabel }]}>
             Restricted to verified @kiit.ac.in accounts only.{'\n'}
             Student-run community, not officially affiliated with KIIT.
           </Text>
         </View>
 
-        {/* Developer Bypass - Subtle segmented picker style */}
+        {/* Dev bypass */}
         {__DEV__ && (
           <View style={styles.devSection}>
             <Text style={[styles.devLabel, { color: colors.tertiaryLabel }]}>
-              Quick Access
+              DEVELOPER ACCOUNTS
             </Text>
-            <View style={styles.devButtons}>
-              <Pressable
-                style={[styles.devButton, { backgroundColor: colors.card }]}
-                onPress={() => devSwitchUser('2205001@kiit.ac.in')}
-              >
-                <Text style={[styles.devButtonText, { color: colors.label }]}>Arjun</Text>
-                <Text style={[styles.devSubtext, { color: colors.secondaryLabel }]}>CSE</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.devButton, { backgroundColor: colors.card }]}
-                onPress={() => devSwitchUser('2205002@kiit.ac.in')}
-              >
-                <Text style={[styles.devButtonText, { color: colors.label }]}>Sneha</Text>
-                <Text style={[styles.devSubtext, { color: colors.secondaryLabel }]}>Mech</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.devButton, styles.devButtonHighlight, { backgroundColor: colors.greenTint, borderColor: colors.green }]}
-                onPress={() => devSwitchUser('2205003@kiit.ac.in')}
-              >
-                <Text style={[styles.devButtonText, { color: colors.green }]}>Ravi</Text>
-                <Text style={[styles.devSubtext, { color: colors.green }]}>Mod</Text>
-              </Pressable>
-            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.devScroll}
+            >
+              {DEV_ACCOUNTS.map((acct) => (
+                <Pressable
+                  key={acct.email}
+                  style={({ pressed }) => [
+                    styles.devPill,
+                    { backgroundColor: colors.cardPressed },
+                    pressed && {
+                      transform: [{ scale: 0.97 }],
+                      opacity: 0.85,
+                    },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    devSwitchUser(acct.email);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sign in as ${acct.name}`}
+                >
+                  <Text style={[styles.devPillText, { color: colors.label }]}>
+                    {acct.name} · {acct.role}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         )}
       </SafeAreaView>
-
-      {/* Domain Error Modal */}
-      <Modal visible={!!domainError} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <BlurView tint={isDark ? "dark" : "light"} intensity={40} style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={styles.modalAccent} />
-            <Text style={[styles.modalTitle, { color: "#FF3B30" }]}>Access Denied</Text>
-            <Text style={[styles.modalMessage, { color: colors.label }]}>
-              {domainError}
-            </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: colors.cardPressed }]}
-              onPress={clearDomainError}
-            >
-              <Text style={[styles.modalButtonText, { color: colors.blue }]}>Acknowledge</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
   },
-  gradientBg: {
-    ...StyleSheet.absoluteFill,
-  },
-  content: {
+  safeArea: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
+    justifyContent: 'center',
+    padding: 24,
   },
-  headerContainer: {
-    alignItems: "center",
-    marginBottom: 48,
+  // Header
+  header: {
+    alignItems: 'center',
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    borderCurve: "continuous" as const,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  title: {
+  brandTitle: {
     fontSize: 34,
-    fontWeight: "700",
-    letterSpacing: 0.37,
-    marginBottom: 4,
+    fontWeight: '700',
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 17,
-    fontWeight: "400",
-    letterSpacing: -0.41,
+  brandSubtitle: {
+    fontSize: 15,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 8,
   },
+  // Auth card
   authCard: {
-    borderRadius: 20,
-    borderCurve: "continuous" as const,
+    borderRadius: 24,
+    borderCurve: 'continuous' as const,
     padding: 24,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60, 60, 67, 0.18)",
+    marginTop: 48,
   },
   primaryButton: {
-    height: 50,
+    minHeight: 50,
     borderRadius: 14,
-    borderCurve: "continuous" as const,
-    alignItems: "center",
-    justifyContent: "center",
+    borderCurve: 'continuous' as const,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryButtonText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: -0.41,
+    fontWeight: '600',
   },
+  // Divider
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    fontSize: 13,
+    marginHorizontal: 12,
+  },
+  // Disclaimer
   disclaimer: {
     fontSize: 13,
-    fontWeight: "400",
-    letterSpacing: -0.08,
-    textAlign: "center",
-    marginTop: 16,
-    lineHeight: 18,
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: 20,
   },
+  // Dev
   devSection: {
     marginTop: 40,
-    alignItems: "center",
+    alignItems: 'center',
   },
   devLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.07,
-    textTransform: "uppercase",
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 12,
   },
-  devButtons: {
-    flexDirection: "row",
-    gap: 12,
+  devScroll: {
+    paddingHorizontal: 4,
+    gap: 8,
   },
-  devButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderCurve: "continuous" as const,
-    alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60, 60, 67, 0.18)",
-  },
-  devButtonHighlight: {
-    borderWidth: 1,
-  },
-  devButtonText: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  devSubtext: {
-    fontSize: 11,
-    fontWeight: "400",
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  modalContent: {
-    width: "100%",
-    maxWidth: 320,
+  devPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
-    borderCurve: "continuous" as const,
-    padding: 24,
-    overflow: "hidden",
+    borderCurve: 'continuous' as const,
   },
-  modalAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: "#FF3B30",
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    letterSpacing: 0.35,
-    marginBottom: 8,
-  },
-  modalMessage: {
-    fontSize: 15,
-    fontWeight: "400",
-    letterSpacing: -0.24,
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  modalButton: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderCurve: "continuous" as const,
-    alignItems: "center",
-  },
-  modalButtonText: {
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: -0.41,
+  devPillText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

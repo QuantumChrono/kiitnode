@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, Pressable, Switch, StyleSheet, Modal } from "react-native";
+import { View, Text, ScrollView, Pressable, Switch, StyleSheet } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/context/ThemeContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import * as Haptics from 'expo-haptics';

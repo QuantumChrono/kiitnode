@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Modal, View, Text, Pressable, StyleSheet, TextInput, ScrollView, KeyboardAvoidingView, Platform, FlatList } from "react-native";
+import { Modal, View, Text, Pressable, StyleSheet, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthContextType } from "@/context/AuthContext";
 import { PostTag } from "@/types/database";
 import * as Haptics from "expo-haptics";
-import * as Linking from "expo-linking";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
@@ -20,10 +19,7 @@ export default function CreateCollabModal({ visible, onRequestClose, onPostCreat
   const auth = useAuth() as AuthContextType;
   const insets = useSafeAreaInsets();
 
-  if (!auth.profile) return null;
-
-  const profile = auth.profile;
-
+  // All hooks must be called before any conditional returns
   const [projectTitle, setProjectTitle] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [lookingFor, setLookingFor] = useState("");
@@ -31,6 +27,10 @@ export default function CreateCollabModal({ visible, onRequestClose, onPostCreat
   const [seriousnessLevel, setSeriousnessLevel] = useState<"Casual" | "Serious" | "Hackathon Win" | "Startup MVP">("Casual");
   const [weeklyBandwidth, setWeeklyBandwidth] = useState<"< 5 hrs" | "5-15 hrs" | "20+ hrs">("< 5 hrs");
   const [isPosting, setIsPosting] = useState(false);
+
+  if (!auth.profile) return null;
+
+  const profile = auth.profile;
 
   const seriousnessOptions = [
     { label: "Casual", value: "Casual" },
@@ -57,14 +57,19 @@ export default function CreateCollabModal({ visible, onRequestClose, onPostCreat
         .map((skill) => skill.trim())
         .filter((skill) => skill.length > 0);
 
+      const desc = projectDescription.trim();
+      const roles = lookingFor.trim();
+      const combinedContent = roles
+        ? (desc ? `${desc}\n\nLooking for: ${roles}` : `Looking for: ${roles}`)
+        : (desc || "Looking for collaborators.");
+
       const newPost = {
         title: projectTitle.trim(),
-        content: projectDescription.trim(),
+        content: combinedContent,
         tag: "COLLAB" as PostTag,
         skill_tags: skillsArray.length > 0 ? skillsArray : null,
         seriousness_level: seriousnessLevel,
         weekly_bandwidth: weeklyBandwidth,
-        looking_for: lookingFor.trim() || null,
         location_tag: profile.campus_location,
         is_anonymous: false,
         sponsored: false,

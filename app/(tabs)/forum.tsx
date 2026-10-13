@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
 import { MessageCircle, ThumbsUp, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { useAuth } from '@/hooks/useAuth';
-import { AuthContextType } from '@/context/AuthContext';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import PostDetailModal from '@/components/modals/PostDetailModal';
 import CreateForumModal from '@/components/modals/CreateForumModal';
 import * as Haptics from 'expo-haptics';
+import { supabase } from '@/lib/supabase';
+import { PublicPost } from '@/types/database';
 
 interface Post {
   id: string;
@@ -24,30 +24,7 @@ interface Post {
   content?: string;
 }
 
-const SEED_POSTS: Post[] = [
-  {
-    id: '1',
-    title: 'Exam notes drive - Share your PDFs!',
-    author: 'Arjun Patel',
-    campus: 'Campus 6',
-    isAnonymous: false,
-    likes: 24,
-    comments: 8,
-    category: 'Academic',
-    content: 'Final exams are approaching. I have compiled all my notes from the last 3 semesters into a Drive link. Drop your links below and let\'s help each other out!'
-  },
-  {
-    id: '3',
-    title: 'Hostel power cuts are getting worse...',
-    author: '',
-    campus: '',
-    isAnonymous: true,
-    likes: 42,
-    comments: 15,
-    category: 'Campus',
-    content: 'Is anyone else experiencing multiple power cuts every day this week? It is making it impossible to focus on assignments.'
-  },
-];
+// Tags that appear in the forum feed
 
 function ForumCard({ post, onPress }: { post: Post, onPress: () => void }) {
   const colors = useThemeColors();
@@ -157,10 +134,61 @@ function ForumCard({ post, onPress }: { post: Post, onPress: () => void }) {
 export default function ForumScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const auth = useAuth() as AuthContextType;
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
-  const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchForumPosts = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('posts_public')
+        .select('*')
+        .in('tag', ['DISCUSSION', 'REQUEST'])
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      const transformedPosts: Post[] = (data || []).map((dbPost: PublicPost) => ({
+        id: dbPost.id,
+        title: dbPost.title,
+        author: dbPost.is_anonymous ? '' : (dbPost.full_name || 'Unknown'),
+        campus: dbPost.is_anonymous ? '' : (dbPost.location_tag || ''),
+        isAnonymous: dbPost.is_anonymous,
+        likes: 0,
+        comments: 0,
+        category: dbPost.tag === 'REQUEST' ? 'Campus Query' : 'Discussion',
+        content: dbPost.content
+      }));
+
+      setPosts(transformedPosts);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching forum posts:', err);
+      setError('Failed to load posts');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchForumPosts();
+  }, [fetchForumPosts]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchForumPosts();
+  };
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setError(null);
+    fetchForumPosts();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -173,18 +201,44 @@ export default function ForumScreen() {
           paddingHorizontal: 16,
           gap: 16
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.tint}
+            colors={[colors.tint]}
+          />
+        }
       >
         <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 0 }]}>Forum</Text>
 
-        <View style={styles.postsContainer}>
-          {posts.map((post) => (
-            <ForumCard
-              key={post.id}
-              post={post}
-              onPress={() => setSelectedPost(post)}
-            />
-          ))}
-        </View>
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.tint} />
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Text style={[styles.errorText, { color: colors.secondaryLabel }]}>{error}</Text>
+            <Pressable onPress={handleRetry} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
+              <Text style={[styles.retryButtonText, { color: colors.card }]}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : posts.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={[styles.emptyText, { color: colors.secondaryLabel }]}>No forum posts yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.tertiaryLabel }]}>Be the first to start a discussion</Text>
+          </View>
+        ) : (
+          <View style={styles.postsContainer}>
+            {posts.map((post) => (
+              <ForumCard
+                key={post.id}
+                post={post}
+                onPress={() => setSelectedPost(post)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {selectedPost && (
@@ -194,21 +248,9 @@ export default function ForumScreen() {
       <CreateForumModal
         visible={isCreateModalVisible}
         onRequestClose={() => setIsCreateModalVisible(false)}
-        onPostCreated={(newPost) => {
-          const newForumPost: Post = {
-            id: newPost.id,
-            title: newPost.title,
-            author: newPost.is_anonymous ? '' : (auth.profile?.full_name || 'Current User'),
-            campus: newPost.location_tag || '',
-            isAnonymous: newPost.is_anonymous,
-            likes: 0,
-            comments: 0,
-            category: newPost.content.includes('Academic') || newPost.content.includes('academic') ? 'Academic' :
-                     newPost.content.includes('Events') || newPost.content.includes('events') ? 'Events' : 'Campus',
-            content: newPost.content
-          };
-          setPosts([newForumPost, ...posts]);
+        onPostCreated={() => {
           setIsCreateModalVisible(false);
+          fetchForumPosts();
         }}
       />
 
@@ -256,5 +298,32 @@ const styles = StyleSheet.create({
   actionItemText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  centerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 15,
   }
 });

@@ -1,1272 +1,453 @@
-# UI.md — KIIT Node Apple Human Interface Guidelines (HIG) Specification
+# KIIT Node — UI/UX Design System and Interaction Specification
 
-This document consolidates the previous UI specifications into one implementation spec. Repeated rules, color tables, typography entries, and component definitions have been merged so that each requirement appears once. Where earlier snippets conflicted, the implementation rule below is the resolved version.
+**Status:** Implementation specification  
+**Platform priority:** Android-first, React Native / Expo if confirmed by the repository  
+**Design intent:** Premium, warm, student-native, dependable, content-led  
+**Hard constraint:** No glassmorphism, no `BlurView`, no backdrop blur, and no blur-dependent or transparency-dependent layout.
 
-> **Implementation note:** This is a KIIT Node design specification inspired by Apple's platform conventions. The exact numeric typography values below are the project's chosen SF Pro scale, not a claim that every value is an Apple-published HIG constant. Apple recommends system fonts, semantic label colors, adaptive system colors, familiar components, restrained brand color, and appropriate contrast. [Apple HIG / Developer Documentation](https://developer.apple.com/design/human-interface-guidelines/)
-
----
-
-## 1. Non-Negotiable Anti-AI / Design Redlines
-
-### 1.1 No generic Tailwind palettes
-
-Never use generic Tailwind palette names or arbitrary raw Tailwind colors such as:
-
-- `slate-900`
-- `gray-800`
-- `zinc-900`
-- Standard raw Tailwind hex values
-
-Use the semantic KIIT Node color tokens defined in Section 2.
-
-### 1.2 No pure-white screen backgrounds
-
-The root screen background is never pure white.
-
-- **Light mode screen:** `#F2F2F7`
-- **Light mode cards/elevated surfaces:** `#FFFFFF`
-- **Dark mode screen:** `#000000`
-- **Dark mode cards/elevated surfaces:** `#1C1C1E`
-
-Pure `#FFFFFF` is reserved for elevated light-mode card surfaces.
-
-### 1.3 No greeting-card hero UI
-
-Do not create generic hero cards such as:
-
-> "Welcome back, [Name]!"
-
-Use clean Large Titles anchored at the top, for example:
-
-- `Teammates`
-- `Market`
-- `Forum`
-
-The interface should prioritize useful content rather than decorative branding.
-
-### 1.4 No fake status indicators
-
-Do not place a decorative glowing green "online dot" beside `KIIT Node`. Brand titles should remain clean.
-
-### 1.5 No fixed text-container heights
-
-Text containers must not use fixed heights such as:
-
-- `h-14`
-- `h-20`
-- Arbitrary fixed pixel heights
-
-Use intrinsic sizing with flexbox, for example:
-
-```tsx
-{
-  flexDirection: 'column',
-  gap: 4,
-  paddingVertical: 14,
-}
-```
-
-This prevents text collision and allows content to grow naturally.
-
-### 1.6 Hairline borders only
-
-All card borders, glass borders, specular borders, and row dividers must use:
-
-```tsx
-borderWidth: StyleSheet.hairlineWidth
-```
-
-or the corresponding directional property such as:
-
-```tsx
-borderBottomWidth: StyleSheet.hairlineWidth
-```
-
-Never use arbitrary `1px` or `2px` borders for these UI elements. React Native documents `StyleSheet.hairlineWidth` specifically for thin lines and dividers. [React Native StyleSheet](https://reactnative.dev/docs/stylesheet)
-
-### 1.7 Continuous squircle geometry
-
-Every rounded container, card, button, pill, sheet, and circular action that uses `borderRadius` should also declare:
-
-```tsx
-borderCurve: 'continuous'
-```
-
-`borderCurve: 'continuous'` is a supported React Native view style on iOS 13+. On Android, treat it as an iOS-specific enhancement rather than assuming it changes Android rendering. [React Native View Style Props](https://reactnative.dev/docs/0.84/view-style-props)
-
-### 1.8 Targeted glassmorphism
-
-Blur is reserved for:
-
-- Floating Tab Bar Dock
-- Sticky Top Navigation / Header
-- Other explicitly designated glass controls
-
-Content cards remain solid. Do not turn ordinary feed cards, grouped lists, or content surfaces into translucent glass because that reduces text legibility and weakens visual hierarchy.
-
-### 1.9 Branding restraint
-
-KIIT Green is an accent, not the default color for every interactive element.
-
-Apple's current guidance similarly recommends using an accent color judiciously and avoiding excessive use across controls. [Apple HIG — Branding](https://developer.apple.com/design/human-interface-guidelines/branding)
+This document defines how KIIT Node should look and behave. It is not permission to rewrite working architecture or invent product features. First inspect the actual repository and map these guidelines onto the existing framework, navigation, theme, icon set, and reusable components. If a detail conflicts with a platform limitation or the actual stack, prefer a deterministic implementation and record a material decision in `DECISIONS.md`.
 
 ---
 
-## 2. Centralized Semantic Color Tokens
-
-Every icon, text color, background, border, badge, and interactive state must consume this semantic color system instead of hard-coded component-specific colors.
-
-| Token | Light Mode | Dark Mode | Purpose |
-|---|---|---|---|
-| `bg` | `#F2F2F7` | `#000000` | Full-screen root background |
-| `card` | `#FFFFFF` | `#1C1C1E` | Inset grouped cards and elevated surfaces |
-| `cardPressed` | `#E5E5EA` | `#2C2C2E` | Pressed state for cards/rows |
-| `label` | `#000000` | `#FFFFFF` | Primary headings and high-contrast text |
-| `secondaryLabel` | `rgba(60, 60, 67, 0.60)` | `rgba(235, 235, 245, 0.60)` | Metadata, subtext, timestamps |
-| `tertiaryLabel` | `rgba(60, 60, 67, 0.30)` | `rgba(235, 235, 245, 0.30)` | Placeholders, inactive icons, subtle text |
-| `separator` | `rgba(60, 60, 67, 0.18)` | `rgba(84, 84, 88, 0.55)` | Hairline dividers; indent by 16pt in grouped lists |
-| `glassBg` | `rgba(255, 255, 255, 0.82)` | `rgba(28, 28, 30, 0.82)` | Frosted-glass fallback/tint layer |
-| `glassBorder` | `rgba(0, 0, 0, 0.08)` | `rgba(255, 255, 255, 0.14)` | Specular glass edge |
-| `tint` | `#34C759` | `#30D158` | KIIT Green / Apple System Green accent |
-| `tintBg` | `rgba(52, 199, 89, 0.12)` | `rgba(48, 209, 88, 0.16)` | Subtle green badge background |
-| `blue` | `#007AFF` | `#0A84FF` | Action links, secondary interactive icons |
-| `red` | `#FF3B30` | `#FF453A` | Destructive actions such as Sign Out |
-
-### Semantic color aliases
-
-If the codebase already uses the older names, map them as follows:
-
-| Older name | Canonical name |
-|---|---|
-| `ios-bg` | `bg` |
-| `ios-card` | `card` |
-| `ios-card-pressed` | `cardPressed` |
-| `ios-label` | `label` |
-| `ios-secondary-label` | `secondaryLabel` |
-| `ios-tertiary-label` | `tertiaryLabel` |
-| `ios-separator` | `separator` |
-| `ios-glass-border` | `glassBorder` |
-| `ios-green` | `tint` |
-| `ios-green-tint` | `tintBg` |
-| `ios-blue` | `blue` |
-
-The semantic system corresponds to Apple's general model of primary, secondary, tertiary, and quaternary label colors, system backgrounds, grouped backgrounds, and separator colors. [Apple UIKit UI Element Colors](https://developer.apple.com/documentation/uikit/ui-element-colors)
-
-### Light-mode reference palette
-
-```text
-ios-bg             #F2F2F7
-ios-card           #FFFFFF
-ios-card-pressed   #E5E5EA
-ios-label          #000000
-ios-secondary-label rgba(60, 60, 67, 0.60)
-ios-tertiary-label  rgba(60, 60, 67, 0.30)
-ios-separator       rgba(60, 60, 67, 0.18)
-ios-glass-border    rgba(0, 0, 0, 0.08)
-ios-green           #34C759
-ios-green-tint      rgba(52, 199, 89, 0.12)
-ios-blue            #007AFF
-```
-
-### Dark-mode reference palette
-
-```text
-ios-bg             #000000
-ios-card           #1C1C1E
-ios-card-pressed   #2C2C2E
-ios-label          #FFFFFF
-ios-secondary-label rgba(235, 235, 245, 0.60)
-ios-tertiary-label  rgba(235, 235, 245, 0.30)
-ios-separator       rgba(84, 84, 88, 0.55)
-ios-glass-border    rgba(255, 255, 255, 0.16)
-ios-green           #30D158
-ios-green-tint      rgba(48, 209, 88, 0.16)
-ios-blue            #0A84FF
-```
-
-Apple recommends adaptive semantic colors rather than hard-coded colors when building native interfaces; for this React Native implementation, the `colors` object provides the equivalent semantic abstraction. [Apple HIG — Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)
-
----
-
-## 3. Color Neutrality — 90/10 Rule
-
-The visual hierarchy should remain approximately:
-
-- **90% neutral:** cards, badges, secondary buttons, surfaces, and most interface elements use whites, blacks, grays, or semantic neutral surfaces.
-- **10% brand/accent:** KIIT Green is reserved primarily for:
-  - Floating `+` button
-  - Verified checkmarks/badges
-  - Active tab icons
-  - Other genuinely primary status/action indicators
-
-### Feed action buttons
-
-`Contact` and `Message` buttons must be neutral pills:
-
-```tsx
-backgroundColor: colors.cardPressed
-```
-
-Do not make them green merely because they are interactive.
-
-### Text hierarchy
-
-Use:
-
-```tsx
-colors.label
-colors.secondaryLabel
-colors.tertiaryLabel
-```
-
-for primary, secondary, and muted content respectively.
-
-Maintain sufficient contrast in both appearances. Apple recommends at least 4.5:1 contrast for foreground/background combinations and encourages stronger contrast for small custom text. [Apple HIG — Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)
-
----
-
-## 4. Typography — SF Pro Project Scale
-
-Use the system font / SF Pro family where available. Apple recommends system fonts for legibility and accessibility. [Apple HIG — Labels](https://developer.apple.com/design/human-interface-guidelines/labels)
-
-The KIIT Node project typography scale is:
-
-| Style | Size | Weight | Line Height | Letter Spacing | Other |
-|---|---:|---|---:|---:|---|
-| Large Title | 34pt | 700 | 41pt | `0.37` | — |
-| Title 1 | 28pt | 700 | 34pt | `0.36` | — |
-| Title 2 | 22pt | 700 | 28pt | `0.35` | — |
-| Title 3 | 20pt | 600 | 25pt | `0.38` | — |
-| Headline | 17pt | 600 | 22pt | `-0.41` | — |
-| Body | 17pt | 400 | 22pt | `-0.41` | Primary body scale |
-| Callout | 16pt | 400 | 21pt | `-0.32` | — |
-| Subheadline | 15pt | 400 | 20pt | `-0.24` | — |
-| Footnote | 13pt | 400 | 18pt | `-0.08` | — |
-| Caption 1 | 12pt | 400 | 16pt | `0.0` | — |
-| Caption 2 / Micro | 11pt | 600 | 13pt | `0.07` | Uppercase |
-
-### Implementation note on the earlier conflicting Body value
-
-An earlier draft listed Body as `15pt / 20pt / -0.24`, while the fuller typography specification listed Body as `17pt / 22pt / -0.41` and separately defined Subheadline as `15pt / 20pt / -0.24`.
-
-The consolidated specification therefore uses:
-
-- **Body:** `17 / 22 / -0.41`
-- **Subheadline:** `15 / 20 / -0.24`
-
-This preserves both intended scales without assigning two different definitions to the same token.
-
-### Footnote / badge usage
-
-The earlier specification also described:
-
-```text
-Footnote / Badge: 13pt, Medium (500), 18pt, -0.08
-```
-
-For implementation, use:
-
-- **Footnote:** `13pt`, Regular (`400`), `18pt`, `-0.08`
-- **Badge text where medium emphasis is required:** `13pt`, Medium (`500`), `18pt`, `-0.08`
-
-This keeps the original Footnote and Badge intent without conflating them into one typography token.
-
-### Caption 2
-
-```tsx
-fontSize: 11,
-fontWeight: '600',
-letterSpacing: 0.07,
-textTransform: 'uppercase',
-```
-
----
-
-## 5. Screen Layout & Safe Areas
-
-### Root container
-
-Every screen should start from:
-
-```tsx
-<View
-  style={{
-    flex: 1,
-    backgroundColor: colors.bg,
-  }}
->
-```
-
-### Standard scroll content
-
-For screens with a fixed/sticky header:
-
-```tsx
-contentContainerStyle={{
-  paddingTop: insets.top + 56,
-  paddingBottom: insets.bottom + 96,
-  paddingHorizontal: 16,
-}}
-```
-
-For screens where the top navigation/header requires the additional 4pt separation used by the earlier draft:
-
-```tsx
-contentContainerStyle={{
-  paddingTop: insets.top + 60,
-  paddingBottom: insets.bottom + 100,
-  paddingHorizontal: 16,
-}}
-```
-
-Use the first value (`+56`) as the canonical default for the sticky-header architecture. Use the second only where the specific screen has a taller header/content offset.
-
-The important invariants are:
-
-- Content must not escape above the status bar.
-- Content must scroll behind the frosted header where intended.
-- Bottom content must remain clear of the floating dock.
-
----
-
-## 6. Sticky Frosted Header / Top Navigation
-
-The header is fixed and sits above scrolling content.
-
-### Frame
-
-```tsx
-{
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  zIndex: 50,
-}
-```
-
-### Safe-area layout
-
-```tsx
-{
-  paddingTop: insets.top,
-  height: insets.top + 48,
-}
-```
-
-The visible content/header area is `48pt`, with the status-bar safe area added above it.
-
-### Border
-
-```tsx
-{
-  borderBottomWidth: StyleSheet.hairlineWidth,
-  borderBottomColor: colors.separator,
-}
-```
-
-### Header behavior
-
-- It must remain sticky/fixed.
-- Scrolling content passes behind it.
-- It must not allow content to render into the status-bar region.
-- Use the glass construction defined in Section 10.
-
----
-
-## 7. Floating Glass Capsule Dock — Tab Bar
-
-Never use Expo/React Navigation's default visual `tabBarStyle` for this design. Use a dedicated custom `tabBar` component.
-
-The purpose is to eliminate the Android icon vertical-shift issue and provide deterministic geometry.
-
-### Frame
-
-```tsx
-{
-  position: 'absolute',
-  bottom: Math.max(insets.bottom + 8, 16),
-  left: 20,
-  right: 20,
-  height: 64,
-  borderRadius: 32,
-  borderCurve: 'continuous',
-  overflow: 'hidden',
-}
-```
-
-The earlier draft used `height: 66` / `borderRadius: 33`. The consolidated specification uses `64 / 32` because it matches the later custom-tab-bar architecture while preserving the capsule geometry.
-
-### Material
-
-Use layered glass:
-
-1. Blur layer.
-2. Semantic translucent `colors.glassBg` layer.
-3. Hairline specular border.
-4. `overflow: 'hidden'` for clipping.
-
-See Section 10 for the current Expo Android implementation.
-
-### Ambient shadow
-
-```tsx
-{
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: isDark ? 0.4 : 0.12,
-  shadowRadius: 20,
-  elevation: 8,
-}
-```
-
-The earlier `shadowRadius: 24 / elevation: 10` values are retained as an optional heavier variant, but the canonical dock uses `20 / 8` to match the later specification.
-
-### Tab item layout
-
-```tsx
-{
-  flex: 1,
-  height: '100%',
-  alignItems: 'center',
-  justifyContent: 'center',
-}
-```
-
-### Tab item typography
-
-- Icon: `22pt`
-- Label: `10pt`
-- Label weight: Semibold (`600`)
-- Label `marginTop`: `3`
-- Active color: `colors.tint`
-- Inactive color: `colors.tertiaryLabel`
-
----
-
-## 8. Inset Grouped Table Card — iOS Settings Style
-
-Use grouped list containers instead of generic isolated cards when presenting rows/settings-style information.
-
-### Container
-
-```tsx
-{
-  backgroundColor: colors.card,
-  borderRadius: 16,
-  borderCurve: 'continuous',
-  overflow: 'hidden',
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: isDark
-    ? 'rgba(84, 84, 88, 0.55)'
-    : 'rgba(0, 0, 0, 0.06)',
-}
-```
-
-### Rows
-
-```tsx
-{
-  minHeight: 52,
-  paddingHorizontal: 16,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-}
-```
-
-Do not assign fixed heights to text-bearing row content. `minHeight` is acceptable because it provides a minimum while allowing intrinsic content to grow.
-
-### Dividers
-
-```tsx
-{
-  height: StyleSheet.hairlineWidth,
-  backgroundColor: colors.separator,
-  marginLeft: 16,
-}
-```
-
-The `marginLeft: 16` is mandatory. Dividers must align with label content and must never span edge-to-edge.
-
----
-
-## 9. Feed Cards
-
-Feed/content cards use solid surfaces rather than glass.
-
-```tsx
-{
-  backgroundColor: colors.card,
-  borderRadius: 20,
-  borderCurve: 'continuous',
-  padding: 16,
-  borderWidth: StyleSheet.hairlineWidth,
-  borderColor: colors.separator,
-}
-```
-
-### Light-mode ambient shadow
-
-```tsx
-{
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.04,
-  shadowRadius: 12,
-  elevation: 2,
-}
-```
-
-Do not apply a heavy shadow in dark mode.
-
-### 3D card finish
-
-Cards may additionally use a subtle specular top edge:
-
-```tsx
-{
-  borderTopWidth: StyleSheet.hairlineWidth,
-  borderTopColor: isDark
-    ? 'rgba(255, 255, 255, 0.10)'
-    : 'rgba(255, 255, 255, 0.80)',
-}
-```
-
-This should not replace the required semantic border; it is an additional subtle highlight.
-
----
-
-## 10. True Glassmorphism — Android & iOS
-
-For a glass component where content visibly scrolls behind the element, the outer container must remain transparent.
-
-### Important Android implementation correction
-
-Older versions of this specification used:
-
-```tsx
-experimentalBlurMethod="dimezisBlurView"
-```
-
-Current Expo BlurView documentation uses `blurMethod="dimezisBlurView"` and, in current stable Android implementations, supports `BlurTargetView` + `blurTarget` for actual background blurring. The older prop is therefore not the canonical implementation for current Expo SDKs. [Expo BlurView documentation](https://docs.expo.dev/versions/latest/sdk/blur-view/)
-
-### Current glass structure
-
-For current Expo SDKs, use a structure equivalent to:
-
-```tsx
-import { BlurTargetView, BlurView } from 'expo-blur';
-import { useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
-
-const targetRef = useRef<View | null>(null);
-
-<View style={styles.glassHost}>
-  <BlurTargetView
-    ref={targetRef}
-    style={StyleSheet.absoluteFill}
-  >
-    {/* Background/content that should be blurred */}
-  </BlurTargetView>
-
-  <BlurView
-    blurTarget={targetRef}
-    blurMethod="dimezisBlurView"
-    intensity={90}
-    tint={isDark ? 'systemThickMaterialDark' : 'systemThickMaterialLight'}
-    style={StyleSheet.absoluteFill}
-  />
-
-  <View
-    pointerEvents="none"
-    style={[
-      StyleSheet.absoluteFill,
-      {
-        backgroundColor: isDark
-          ? 'rgba(15, 15, 15, 0.65)'
-          : 'rgba(255, 255, 255, 0.65)',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: isDark
-          ? 'rgba(255, 255, 255, 0.15)'
-          : 'rgba(0, 0, 0, 0.08)',
-      },
-    ]}
-  />
-
-  <View
-    pointerEvents="none"
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: isDark
-        ? 'rgba(255, 255, 255, 0.15)'
-        : 'rgba(255, 255, 255, 0.80)',
-    }}
-  />
-
-  {/* Glass content goes here */}
-</View>
-```
-
-And the host should use:
-
-```tsx
-const styles = StyleSheet.create({
-  glassHost: {
-    position: 'absolute',
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-    borderRadius: 32,
-    borderCurve: 'continuous',
-  },
-});
-```
-
-### Why the layering exists
-
-The composition is:
-
-1. **Blur layer** — provides background distortion.
-2. **Translucent tint/backdrop** — prevents the glass from becoming visually clear or washed out.
-3. **Hairline border** — provides the specular edge.
-4. **Top highlight** — adds the slight raised/3D appearance.
-5. **Content** — remains above the material layers.
-
-Expo's current documentation also notes that `BlurView` needs appropriate background content to blur and that `overflow: 'hidden'` is useful when clipping rounded BlurView containers. [Expo BlurView](https://docs.expo.dev/versions/latest/sdk/blur-view/)
-
-### iOS material
-
-For iOS, the preferred tint values are:
-
-```tsx
-tint={
-  isDark
-    ? 'systemThickMaterialDark'
-    : 'systemThickMaterialLight'
-}
-```
-
-Other valid system material tints can be used where a thinner or lighter material is specifically required.
-
----
-
-## 11. Circular Glass Quick Actions
-
-Quick actions follow a contact-card style.
-
-### Geometry
-
-Use either:
-
-- `44 × 44`
-- `48 × 48`
-
-For a `48 × 48` action:
-
-```tsx
-{
-  width: 48,
-  height: 48,
-  borderRadius: 24,
-  borderCurve: 'continuous',
-}
-```
-
-### Background
-
-Light:
-
-```tsx
-backgroundColor: 'rgba(0, 0, 0, 0.04)'
-```
-
-Dark:
-
-```tsx
-backgroundColor: 'rgba(255, 255, 255, 0.10)'
-```
-
-### Content arrangement
-
-The icon goes **inside** the circle.
-
-The label goes **outside**, underneath the circle.
-
-```tsx
-<View style={{ alignItems: 'center' }}>
-  <View
-    style={{
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      borderCurve: 'continuous',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: isDark
-        ? 'rgba(255, 255, 255, 0.10)'
-        : 'rgba(0, 0, 0, 0.04)',
-    }}
-  >
-    <Icon />
-  </View>
-
-  <Text
-    style={{
-      marginTop: 6,
-      fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.07,
-      textTransform: 'uppercase',
-      color: colors.secondaryLabel,
-    }}
-  >
-    Label
-  </Text>
-</View>
-```
-
----
-
-## 12. Primary Action Button
-
-Primary actions may use KIIT Green.
-
-### Geometry
-
-```tsx
-{
-  minHeight: 50,
-  borderRadius: 14,
-  borderCurve: 'continuous',
-  paddingHorizontal: 20,
-  alignItems: 'center',
-  justifyContent: 'center',
-}
-```
-
-`minHeight` is used rather than a fixed text-container height so accessibility and multiline content can expand naturally.
-
-### Background
-
-```tsx
-backgroundColor: isDark ? '#30D158' : '#34C759'
-```
-
-Prefer the semantic equivalent:
-
-```tsx
-backgroundColor: colors.tint
-```
-
-### Label
-
-- `17pt`
-- Semibold (`600`)
-- `#FFFFFF`
-
-### Active/pressed opacity
-
-```tsx
-opacity: pressed ? 0.85 : 1
-```
-
----
-
-## 13. Tactile Press States
-
-Every meaningful `Pressable` button or tappable card should provide a consistent physical response.
-
-### Canonical press interaction
-
-```tsx
-<Pressable
-  style={({ pressed }) => [
-    {
-      transform: [{ scale: pressed ? 0.97 : 1 }],
-      opacity: pressed ? 0.85 : 1,
-    },
-  ]}
->
-  {/* Content */}
-</Pressable>
-```
-
-Do not combine this with arbitrary per-component scale values unless a component has a documented reason to behave differently.
-
-For cards, preserve the semantic pressed surface:
-
-```tsx
-backgroundColor: pressed
-  ? colors.cardPressed
-  : colors.card
-```
-
----
-
-## 14. Floating Action Button — Glass "+"
-
-A sticky bottom-right action button is used for creating posts.
-
-### Position
-
-```tsx
-{
-  position: 'absolute',
-  bottom: insets.bottom + 90,
-  right: 20,
-  width: 54,
-  height: 54,
-  borderRadius: 27,
-  borderCurve: 'continuous',
-}
-```
-
-### Appearance
-
-```tsx
-backgroundColor: colors.tint
-```
-
-Use a white `Plus` icon.
-
-### Shadow
-
-```tsx
-{
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.25,
-  shadowRadius: 14,
-  elevation: 8,
-}
-```
-
-The button is called "glass +" in the original specification, but because it uses an opaque accent fill rather than a translucent material, its implementation should be treated as a floating accent button rather than a literal frosted-glass surface.
-
----
-
-## 15. Apple Sheet Modal
-
-Use a bottom-sheet presentation for creation/editing flows where appropriate.
-
-### Presentation
-
-```tsx
-<Modal
-  animationType="slide"
-  transparent={true}
->
-  {/* Sheet */}
-</Modal>
-```
-
-### Sheet container
-
-```tsx
-{
-  backgroundColor: colors.card,
-  borderTopLeftRadius: 28,
-  borderTopRightRadius: 28,
-  borderCurve: 'continuous',
-}
-```
-
-### Top grabber
-
-```tsx
-{
-  width: 36,
-  height: 5,
-  borderRadius: 2.5,
-  borderCurve: 'continuous',
-  backgroundColor: colors.tertiaryLabel,
-  alignSelf: 'center',
-  marginVertical: 10,
-}
-```
-
----
-
-## 16. Grouped Lists vs. Feed Cards
-
-Use the correct surface for the information type.
-
-### Grouped/settings information
-
-Use:
-
-- `colors.card`
-- `borderRadius: 16`
-- `borderCurve: 'continuous'`
-- Rows with `minHeight: 52`
-- `paddingHorizontal: 16`
-- Hairline separators
-- `marginLeft: 16` on separators
-
-### Feed/content information
-
-Use:
-
-- `colors.card`
-- `borderRadius: 20`
-- `borderCurve: 'continuous'`
-- `padding: 16`
-- Hairline border
-- Light ambient shadow
-- Optional top-edge specular highlight
-
-Do not turn every UI surface into a generic rounded card.
-
----
-
-## 17. Profile Quick Actions
-
-Profile quick actions must follow this structure:
-
-```tsx
-<View style={{ alignItems: 'center' }}>
-  <View style={styles.circle}>
-    <Icon />
-  </View>
-
-  <Text style={styles.label}>
-    Label
-  </Text>
-</View>
-```
-
-Rules:
-
-- Icon is inside the circle.
-- Text is outside the circle.
-- Text is below the circle.
-- Caption styling follows the micro/caption typography.
-- Avoid placing the label inside the circular button.
-
----
-
-## 18. Market / Collaboration Cards
-
-Do not use full-width colored strips for:
-
-- `Selling`
-- Tags
-- Categories
-- Similar metadata
-
-Instead, use compact pills:
-
-```tsx
-{
-  alignSelf: 'flex-start',
-}
-```
-
-The pill should only be as wide as its content.
-
-### Layout
-
-Use flexbox rows to pack:
-
-- Price
-- Title
-- Action
-
-into a compact structure without excessive vertical height.
-
-Example:
-
-```tsx
-<View
-  style={{
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  }}
->
-  <View style={{ flex: 1 }}>
-    {/* Title / metadata */}
-  </View>
-
-  <Text>{price}</Text>
-
-  {/* Action */}
-</View>
-```
-
-Do not create large full-width colored banners merely to communicate a tag or selling state.
-
----
-
-## 19. Component Rules Summary
-
-### Every rounded component
-
-```tsx
-borderRadius: ...,
-borderCurve: 'continuous',
-```
-
-### Every border/divider
-
-```tsx
-borderWidth: StyleSheet.hairlineWidth
-```
-
-or the corresponding directional property.
-
-### Every grouped-list divider
-
-```tsx
-marginLeft: 16
-```
-
-### Every screen
-
-```tsx
-backgroundColor: colors.bg
-```
-
-### Every elevated card
-
-```tsx
-backgroundColor: colors.card
-```
-
-### Every semantic text color
-
-Use:
-
-```tsx
-colors.label
-colors.secondaryLabel
-colors.tertiaryLabel
-```
-
-### Every primary accent
-
-Use:
-
-```tsx
-colors.tint
-```
-
-### Every floating glass surface
-
-Use:
-
-- Transparent host
-- Blur layer
-- Semantic translucent fallback/tint
-- Hairline border
-- Overflow clipping
-- Optional top specular highlight
-
-### Every tappable element
-
-Use the standard pressed interaction:
-
-```tsx
-transform: [{ scale: pressed ? 0.97 : 1 }],
-opacity: pressed ? 0.85 : 1,
-```
-
-where appropriate.
-
----
-
-## 20. Reference Implementation Tokens
-
-A centralized theme object should look approximately like:
-
-```tsx
-export const lightColors = {
-  bg: '#F2F2F7',
-  card: '#FFFFFF',
-  cardPressed: '#E5E5EA',
-
-  label: '#000000',
-  secondaryLabel: 'rgba(60, 60, 67, 0.60)',
-  tertiaryLabel: 'rgba(60, 60, 67, 0.30)',
-
-  separator: 'rgba(60, 60, 67, 0.18)',
-
-  glassBg: 'rgba(255, 255, 255, 0.82)',
-  glassBorder: 'rgba(0, 0, 0, 0.08)',
-
-  tint: '#34C759',
-  tintBg: 'rgba(52, 199, 89, 0.12)',
-
-  blue: '#007AFF',
-  red: '#FF3B30',
-} as const;
-
-export const darkColors = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  cardPressed: '#2C2C2E',
-
-  label: '#FFFFFF',
-  secondaryLabel: 'rgba(235, 235, 245, 0.60)',
-  tertiaryLabel: 'rgba(235, 235, 245, 0.30)',
-
-  separator: 'rgba(84, 84, 88, 0.55)',
-
-  glassBg: 'rgba(28, 28, 30, 0.82)',
-  glassBorder: 'rgba(255, 255, 255, 0.14)',
-
-  tint: '#30D158',
-  tintBg: 'rgba(48, 209, 88, 0.16)',
-
-  blue: '#0A84FF',
-  red: '#FF453A',
-} as const;
-```
-
-Use a single runtime-selected object:
-
-```tsx
-const colors = isDark ? darkColors : lightColors;
-```
-
-Components should consume `colors`, not duplicate light/dark hex values throughout the codebase.
-
----
-
-## 21. Reference Floating Dock
-
-```tsx
-<View
-  style={[
-    {
-      position: 'absolute',
-      bottom: Math.max(insets.bottom + 8, 16),
-      left: 20,
-      right: 20,
-      height: 64,
-      borderRadius: 32,
-      borderCurve: 'continuous',
-      overflow: 'hidden',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.glassBorder,
-
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: isDark ? 0.4 : 0.12,
-      shadowRadius: 20,
-      elevation: 8,
-    },
-  ]}
->
-  {/* Glass material layers */}
-
-  {/* Tab items */}
-</View>
-```
-
-The material itself should follow Section 10 rather than assuming that a single `BlurView` is sufficient on Android.
-
----
-
-## 22. Reference Header
-
-```tsx
-<View
-  style={{
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
-    height: insets.top + 48,
-    paddingTop: insets.top,
-    overflow: 'hidden',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.separator,
-  }}
->
-  {/* Blur/material layers */}
-
-  <View
-    style={{
-      height: 48,
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
-    {/* Header content */}
-  </View>
-</View>
-```
-
----
-
-## 23. Reference Screen
-
-```tsx
-<View
-  style={{
-    flex: 1,
-    backgroundColor: colors.bg,
-  }}
->
-  <ScrollView
-    contentContainerStyle={{
-      paddingTop: insets.top + 56,
-      paddingBottom: insets.bottom + 96,
-      paddingHorizontal: 16,
-    }}
-  >
-    {/* Screen content */}
-  </ScrollView>
-
-  {/* Sticky/floating header */}
-
-  {/* Floating tab dock */}
-
-  {/* Optional floating + button */}
-</View>
-```
-
-For a `FlatList`, apply the same spacing through `contentContainerStyle`.
-
----
-
-## 24. Final Implementation Rules
-
-The interface should read as a restrained Apple-style system rather than a collection of generic AI-generated cards.
-
-The implementation must therefore preserve these invariants:
-
-1. No generic Tailwind palettes.
-2. No pure-white light-mode root background.
-3. No greeting-card hero sections.
-4. No decorative online/status dots beside `KIIT Node`.
-5. No fixed heights on text containers.
-6. Hairline borders only.
-7. Continuous corner curves wherever rounded geometry is used.
-8. Semantic theme colors everywhere.
-9. Solid content cards; glass only for designated navigation/floating surfaces.
-10. Grouped-list separators are indented by exactly `16pt`.
-11. The tab bar is a custom floating capsule.
-12. The top navigation is a sticky/fixed frosted header.
-13. Scrolling content passes behind the frosted header without entering the status-bar area.
-14. Tab icons are `22pt`; tab labels are `10pt` semibold with `3pt` top margin.
-15. Primary actions use KIIT Green; secondary actions remain neutral.
-16. Quick-action icons remain inside circles; labels remain below the circles.
-17. Market/collaboration tags use intrinsic-width pills, not full-width colored strips.
-18. Pressable controls use the standardized `0.97` scale / `0.85` opacity pressed state where appropriate.
-19. Cards can use the subtle specular top edge to reinforce depth.
-20. Android glass uses the current Expo BlurView API rather than the obsolete `experimentalBlurMethod` property.
-21. `BlurTargetView` / `blurTarget` should be used with current Expo Android blur where actual background blur is required.
-22. `overflow: 'hidden'` is required when clipping rounded glass surfaces.
-23. Typography uses the project SF Pro hierarchy defined in Section 4.
-24. The theme is centralized so light/dark values are not scattered across components.
-25. Accessibility and intrinsic sizing take precedence over rigid visual dimensions.
-
-The goal is not to maximize decoration. The goal is a consistent system: semantic surfaces, restrained color, predictable geometry, readable typography, controlled depth, and platform-familiar interaction patterns.
+## 1. Product feeling
+
+KIIT Node is a practical network for students who need teammates, campus goods, academic resources, events, and lost-item help. It should feel like a thoughtfully designed student product—not a corporate analytics dashboard, a generic admin template, a crypto app, or a hastily assembled social-media clone.
+
+The desired impression:
+
+- **Warm and approachable:** comfortable backgrounds, human-scale typography, restrained color, clear language.
+- **Credible:** verified identity cues, consistent information hierarchy, honest status and error feedback.
+- **Fast and low-friction:** predictable navigation, readable cards, compact but comfortable forms, no unnecessary confirmation steps.
+- **Student-native:** useful context and conversational copy without forced slang, gamification, or childish decoration.
+- **Polished through restraint:** precise spacing, well-aligned baselines, stable surfaces, good empty states, carefully selected icons, and consistent interactions.
+
+“Premium” is not achieved by adding shadows, gradients, animated transitions, glowing accents, glass effects, or ornamental cards to every screen. It comes from correctness, clarity, visual rhythm, responsiveness, and details that hold up during real use.
+
+## 2. Design principles and hard exclusions
+
+### Required
+
+1. Content and user tasks take visual priority over decoration.
+2. Use semantic design tokens rather than scattered hard-coded colors.
+3. Use solid or near-solid surfaces with reliable contrast on Android and iOS.
+4. Use one established icon library already present in the repository, where possible.
+5. Prefer simple, native-feeling interactions over custom animation systems.
+6. Make loading, empty, error, disabled, success, and permission states intentional.
+7. Keep layout behavior predictable with keyboard open, large text, narrow widths, and long content.
+8. Respect the app’s existing navigation and safe-area conventions.
+9. Reuse components when their behavior and visual role are genuinely shared.
+10. Ensure the interface does not imply trust, payment protection, institutional endorsement, or safety guarantees that the product cannot provide.
+
+### Prohibited unless the product owner explicitly changes this specification
+
+- Glassmorphism or frosted-glass UI.
+- `BlurView`, backdrop blur, blur filters, or reliance on blur APIs.
+- Transparent navigation bars that depend on content visibly showing through them.
+- Semi-transparent white overlays used to imitate glass cards.
+- Large, soft shadows on every card or button.
+- Neon/glowing borders, heavy gradients, gradient text, or gradient-filled content cards.
+- Decorative blobs, random floating shapes, gratuitous motion, parallax, or animated backgrounds.
+- Emoji used as the primary icon system for navigation or core actions.
+- Excessive pills where a plain label or text action is clearer.
+- Every item enclosed in a separate card; use whitespace and dividers where appropriate.
+- Default-template aesthetics such as undifferentiated grey-on-grey panels, arbitrary rounded rectangles, or an all-black-and-white interface without meaningful accent color.
+- New UI/animation libraries without a concrete gap, compatibility review, and documented reason.
+
+Gradients are allowed only in restrained, limited contexts such as login/onboarding backgrounds or a specific hero treatment. They must not carry essential information, and the screen must remain attractive if gradient rendering differs slightly by device.
+
+## 3. Color system
+
+Treat these values as the initial reference palette. Inspect the current app and existing brand assets before consolidating tokens. If the repository already has a coherent accessible palette, preserve it where it better fits the product; document any intentional deviation. Do not maintain competing token systems.
+
+### Light theme
+
+| Semantic token | Reference value | Usage |
+|---|---|---|
+| `background` | `#F8F9FA` | Main screen background; soft off-white, not stark white |
+| `surface` / `card` | `#FFFFFF` | Cards, sheets, form surfaces |
+| `surfacePressed` | `#F1F3F5` | Pressed/selected neutral surface |
+| `textPrimary` | `#111827` | Main text and high-priority labels |
+| `textSecondary` | `#6B7280` | Metadata, descriptions, supporting labels |
+| `textTertiary` | `#9CA3AF` | Low-priority hints only; never critical instructions |
+| `separator` | `rgba(0,0,0,0.06)` | Hairline dividers and subtle outlines |
+| `border` | `#E5E7EB` | Input outlines and boundaries that need clearer definition |
+| `accent` | `#10B981` | Primary action, selected navigation, positive emphasis |
+| `accentPressed` | `#059669` | Pressed primary action |
+| `accentSoft` | `#D1FAE5` | Subtle selected/positive background where contrast is verified |
+| `success` | `#047857` | Success text/icon where stronger contrast is needed |
+| `warning` | `#B45309` | Warning text/icon |
+| `danger` | `#DC2626` | Destructive action and error state |
+| `info` | `#2563EB` | Informational state where needed |
+
+### Dark theme
+
+| Semantic token | Reference value | Usage |
+|---|---|---|
+| `background` | `#0E1116` | Main screen background |
+| `surface` / `card` | `#161B22` | Cards, sheets, form surfaces |
+| `surfacePressed` | `#21262D` | Pressed/selected neutral surface |
+| `textPrimary` | `#F9FAFB` | Main text |
+| `textSecondary` | `#9CA3AF` | Metadata and supporting text |
+| `textTertiary` | `#6B7280` | Low-priority hints only |
+| `separator` | `rgba(255,255,255,0.08)` | Hairline dividers |
+| `border` | `#30363D` | Input outlines and meaningful boundaries |
+| `accent` | `#10B981` | Primary accent; validate foreground contrast per use |
+| `accentPressed` | `#34D399` | Pressed state where appropriate |
+| `accentSoft` | `#064E3B` | Subtle selected/positive background |
+| `success` | `#34D399` | Success text/icon |
+| `warning` | `#FBBF24` | Warning text/icon |
+| `danger` | `#F87171` | Error/destructive text/icon |
+| `info` | `#60A5FA` | Informational state |
+
+### Color rules
+
+- Use semantic token names in components. Avoid adding local one-off colors unless there is a real semantic need.
+- Green is the brand/action accent, not a background for every surface.
+- Use status colors only when the status meaning is clear. Do not communicate status by color alone; include text or an icon.
+- Keep primary text readable on all surfaces. Verify contrast instead of assuming a palette is accessible.
+- Do not use tertiary text for essential instructions, prices, timestamps that matter, or form labels.
+- Avoid hard-coded light-theme colors inside components that also render in dark mode.
+- If dark mode is not supported by the current app, do not claim it is. Implement it only if the existing theme architecture supports it without destabilizing core functionality; otherwise document the gap and keep tokens structured for future support.
+
+## 4. Typography
+
+Use the system font by default unless the repository already includes a deliberate, licensed font family with good platform coverage. Typography should feel confident and readable, not oversized for decoration.
+
+Reference scale:
+
+| Role | Reference size | Weight | Notes |
+|---|---:|---|---|
+| Screen title | 28–34 pt | Bold / 700 | Use 34 pt mainly for authentication/hero contexts; most app screens should be closer to 28–30 |
+| Section heading | 20–22 pt | Semibold / 600 | Clear hierarchy without shouting |
+| Card/list title | 16–18 pt | Semibold / 600 | Use 17 pt for prominent content titles when it fits |
+| Body | 15–16 pt | Regular / 400 | Default reading size |
+| Supporting body | 14 pt | Regular / 400 | Secondary information, not long-form default text |
+| Metadata | 12–13 pt | Regular / 400–500 | Dates, category, compact supporting labels |
+| Button label | 15–16 pt | Semibold / 600 | Clear action wording |
+| Small legal/help text | 12–13 pt | Regular / 400 | Must remain readable and must not contain the only explanation of a critical rule |
+
+- Suggested body line height: 22–24 pt at 15–16 pt font size.
+- Use sentence case. Avoid all-caps labels except very short, established metadata patterns.
+- Avoid long runs of bold text. Bold should communicate hierarchy, not decorate paragraphs.
+- Do not truncate a title or essential state if wrapping is reasonable.
+- Support system font scaling. Do not force fixed heights on text-containing elements if that causes clipping.
+- Use consistent number, date, and time formatting throughout the app.
+
+## 5. Spacing, shape, borders, and elevation
+
+Use a consistent spacing scale based on 4-point increments. A practical reference scale is 4, 8, 12, 16, 20, 24, 32, and 40 points.
+
+- Screen horizontal padding: typically 16–20 pt, adjusted for device width and existing safe-area structure.
+- Gap between related controls: 8–12 pt.
+- Gap between distinct sections: 24–32 pt.
+- Card internal padding: typically 16 pt; 12 pt is acceptable for compact list rows.
+- Standard interactive control height: approximately 48–52 pt where appropriate; never below the platform’s practical minimum touch target.
+- Minimum practical hit target: 44 × 44 pt, with platform-appropriate behavior.
+- Standard card radius: 14–18 pt. Use a smaller consistent radius for inputs/chips and a larger radius only for major surfaces.
+- Input radius: typically 10–12 pt.
+- Pill radius: fully rounded only for compact tags, filters, or deliberately pill-shaped buttons.
+- Prefer hairline borders and tonal contrast to shadows.
+- Use elevation sparingly for elements that must clearly float above content, such as a modal sheet or anchored menu. Avoid shadowing every card.
+- Avoid nested cards (a card inside a card inside another card) unless the information hierarchy truly needs them.
+- Use dividers for dense lists where a full card per row would create visual noise.
+
+## 6. Layout and responsive behavior
+
+- Design for real Android devices first, while retaining compatibility with iOS if the app supports it.
+- Respect safe areas and existing navigation layout. Do not add duplicate top/bottom insets.
+- Do not rely on fixed screen dimensions. Use flex layouts, wrapping, and content-driven heights.
+- Test long titles, long usernames, missing avatars, unusually long tags, large prices, and multi-line descriptions.
+- Tags and action groups must wrap or reflow on narrow screens rather than clip or force horizontal overflow. Use horizontal scrolling only where it is an intentional interaction, such as a compact filter row.
+- Ensure the keyboard does not cover the active input, submit action, or validation message. Preserve scroll position when practical.
+- A screen should remain usable at larger font sizes. Avoid hard-coded row heights when text can wrap.
+- Empty space should create hierarchy, not leave essential actions below the fold without reason.
+- Do not introduce horizontal scrolling for the whole screen.
+- Use skeletons only when they meaningfully reduce perceived waiting; otherwise use a clear loading indicator and stable layout.
+
+## 7. Navigation, headers, and tab bars
+
+- Navigation must be opaque or use a solid semantic surface. No blur, glass, or content-show-through effect.
+- Use the existing navigation library and route model unless the audit identifies a concrete defect.
+- Keep header height, title alignment, back behavior, and action placement consistent across sibling screens.
+- Use the established icon set for navigation icons. Icons should have consistent stroke weight, size, and optical alignment.
+- Bottom navigation should make the active destination obvious without a large decorative capsule or excessive animation.
+- Keep labels visible when needed to prevent ambiguity. Do not use unfamiliar icons without labels for important destinations.
+- Ensure the content scrolls behind neither an opaque header nor an opaque bottom bar in a way that hides content; use the existing inset/padding mechanism correctly.
+- Preserve native back behavior and Android system back handling.
+- Do not add tabs for future features that are not functional and in scope.
+
+## 8. Buttons and interactive states
+
+### Primary button
+
+- One clearly dominant action per screen or form section.
+- Use the accent color with verified foreground contrast.
+- Reference height: 50 pt, with comfortable horizontal padding.
+- Use concise verb-first labels: “Continue with KIIT Mail”, “Post listing”, “Send request”, “Publish post”.
+- Provide distinct default, pressed, disabled, loading, and (where relevant) success/error states.
+- Press feedback must be subtle. If scaling is used, keep it slight (roughly 0.98) and ensure it does not affect layout or cause jitter.
+- Haptics are optional and must be subtle, supported by the installed library, and never required for feedback. Do not add a new dependency just for a trivial haptic.
+
+### Secondary and destructive actions
+
+- Secondary actions should not visually compete with the primary action.
+- Use text or outline buttons when a filled button would create unnecessary emphasis.
+- Destructive actions must be clearly named and separated from routine actions. Confirm irreversible or high-impact actions with a clear explanation.
+- Do not style every action as a pill.
+- Icon-only buttons need an accessible label and a sufficiently large hit target.
+
+### Interaction feedback
+
+- Every tap target must do what its label/icon promises.
+- Disable duplicate submission while a request is pending where duplicate requests would be harmful.
+- Loading feedback must not falsely imply success.
+- Errors should explain what happened and what the user can do next. Preserve user-entered form values after recoverable failures.
+- Success feedback should be proportional and should not block the next sensible action.
+- Do not use alerts for every minor event. Use inline field errors, unobtrusive feedback, or native dialogs according to severity.
+
+## 9. Forms and validation
+
+- Put a persistent label above or clearly associated with each input. Placeholder text is not a label.
+- Mark required fields clearly and explain meaningful constraints before submission where practical.
+- Validate fields locally for immediate feedback and validate again on the server. Client validation is not a security boundary.
+- Place error messages next to the field they describe and ensure they are accessible to assistive technology.
+- Do not clear the entire form after a server/network failure.
+- Use input types, keyboard types, autocomplete, and text capitalization appropriate to the field.
+- Avoid asking for information the app does not use.
+- For filters, show the active state, provide an obvious way to clear filters, and avoid silently retaining stale filters that produce an empty result.
+- Before leaving a screen with meaningful unsaved input, either preserve the draft or warn the user where appropriate.
+- Do not overvalidate fields in ways that reject reasonable student-entered names, descriptions, or team interests.
+
+## 10. Screen-state requirements
+
+Every data-driven screen must be deliberately designed for the applicable states below. Do not treat a spinner as the only non-success state.
+
+1. **Initial loading:** stable layout, clear progress indication, no fabricated content.
+2. **Populated:** correct hierarchy, clear primary action, realistic long-content handling.
+3. **Empty:** explain why the area is empty and provide the next useful action where possible.
+4. **Filtered empty:** explain that filters may be hiding results and offer a clear/reset action.
+5. **Recoverable error:** explain the failure, offer retry, preserve user input.
+6. **Offline/poor connection:** communicate when an action has not reached the server; do not imply offline persistence unless it exists.
+7. **Permission denied:** explain the consequence and offer a settings path only when relevant.
+8. **Authentication expired:** preserve the intended destination where safe and return the user through a coherent sign-in flow.
+9. **Submitting:** prevent harmful duplicate submissions and show truthful progress.
+10. **Success:** reflect the persisted result and offer a sensible next step.
+11. **Disabled/unavailable:** explain why a control is disabled when the reason is not self-evident.
+12. **Deleted/removed content:** show an appropriate fallback if the user returns to a stale link or screen.
+
+## 11. Identity, trust, and safety cues
+
+- Show verification status only when it is backed by the actual authentication/backend state.
+- Do not display a decorative “verified” badge for users whose email has not been verified by the system.
+- Anonymous posting means anonymous to other students, not anonymous to the system. Never expose the real author link in an anonymous post’s client/API response. The backend must retain accountable authorship as specified by the PRD and `DECISIONS.md`.
+- Anonymous mode must be explicit at composition time and visually confirm the selected mode before publication.
+- Explain what other students can see. Do not bury important privacy implications in tiny text.
+- Report and block actions should be accessible from relevant user-generated content without being visually aggressive.
+- Never imply that reporting guarantees an immediate response. The operational process must match the actual moderation setup.
+- Marketplace screens must not imply payment escrow, delivery protection, seller vetting, or guaranteed safety. Clearly communicate direct student-to-student arrangements where appropriate.
+- Do not reveal a student’s email address or private contact details by default unless the product’s documented behavior explicitly requires it and the user has consented.
+
+## 12. Product-specific visual patterns
+
+### 12.1 Authentication and onboarding
+
+- Use a calm, uncluttered layout with the KIIT Node name, a concise explanation, and a clearly dominant sign-in action.
+- A subtle three-stop background gradient is permitted if supported by the installed framework; reference light stops: `#F8F9FA`, `#E8F5E9`, `#F8F9FA`; dark stops: `#0E1116`, `#064E3B`, `#0E1116`.
+- The sign-in form or action surface must remain a solid semantic surface, not a translucent glass card.
+- The primary action may read “Continue with KIIT Mail” if this accurately describes the actual flow.
+- Explain the `@kiit.ac.in` restriction clearly. Never promise that a domain string alone proves ownership; follow the actual verification flow.
+- Show meaningful progress, invalid-domain feedback, expired-link recovery, resend limits, and network-error recovery according to the actual authentication provider.
+- Developer/test bypasses must never be available in production builds. If a dev-only bypass exists, clearly isolate and guard it using the project’s actual build/environment mechanism.
+- Avoid long marketing copy, decorative illustrations that delay the action, or unsupported institutional endorsement claims.
+
+### 12.2 Teammate Matcher
+
+The primary job is to help a student find compatible collaborators—not to make the app feel like a dating app or a competitive ranking platform.
+
+- Make skill/stack tags easy to scan and compare.
+- Present seriousness/commitment and weekly bandwidth in plain language with short explanations. Avoid judgmental labels such as “good” or “lazy”.
+- Give each profile a strong hierarchy: identity/name, concise project or collaboration intent, skills, commitment expectations, bandwidth, and the next action.
+- The contact/request action must match the real implemented flow. Do not show “Message” if no messaging system exists.
+- Filters should be understandable, composable, resettable, and reflected in results.
+- Provide a useful first-run empty state that explains how to create or complete a profile.
+- Avoid fake match scores, unsupported compatibility percentages, or unexplained algorithmic rankings.
+- Do not expose private email/contact details without a documented reason and consent.
+
+### 12.3 Marketplace
+
+The primary job is to discover relevant campus buy/sell/rent posts and arrange a direct handoff.
+
+- Make item title, price/price expectation, condition, category, availability, and handoff landmark scannable when those fields exist in the actual data model.
+- Use consistent image sizing and a graceful fallback for missing/broken images. Do not let images determine arbitrary row heights.
+- Clearly distinguish free, fixed-price, negotiable, and rental terms if supported by the data model; do not invent semantics for absent fields.
+- Rentals are a category/type, not a stateful rental-management system unless explicitly specified elsewhere.
+- Use curated campus landmark tags only when the names are confirmed. Free-text landmark support should be length-limited and sanitized if the product allows it.
+- Do not create a payment gateway or imply that KIIT Node processes UPI payments. UPI is arranged directly between students, outside the app.
+- Explain listing states such as active, reserved, sold, or removed only if those states are supported by real persisted behavior.
+- Make edit, mark-unavailable, delete, report, and contact actions clear and permission-aware.
+
+### 12.4 Forum
+
+The primary job is to share or find useful campus-relevant information.
+
+- Prioritize readable titles and body text over metadata and reaction counts.
+- Use a consistent category/tag system for notes/exam prep, society events, Lost & Found, and other approved campus-relevant topics.
+- Anonymous mode must be unmistakable to the author before publication and must not leak identity to other students.
+- Make post author identity, timestamp, category, title/body, attachments, and available actions easy to parse without stacking unnecessary cards.
+- Long posts must be readable and must not be clipped behind fixed-height containers.
+- Provide useful empty, loading, error, and filtered-empty states.
+- Report/block affordances should be discoverable but not dominate the post.
+- Do not add likes, follower counts, public reputation, trending scores, or gamified badges unless the PRD explicitly includes them and the functionality is real.
+
+### 12.5 K-Directory
+
+- Treat entries as team-curated content; do not add open submission.
+- Present the entry’s useful information first, with clear contact or external links only where verified and intended for public display.
+- Do not fabricate listings, organizations, contacts, or official status.
+- Handle missing details gracefully without displaying empty labels or broken layout gaps.
+
+### 12.6 Profile, settings, and account lifecycle
+
+- Keep account status, verification state, editable profile fields, privacy controls, blocked users, and sign-out/deletion options logically grouped.
+- Make destructive actions explicit and explain the consequences.
+- Do not claim account deletion or content deletion is complete unless the backend confirms it and the documented retention behavior is accurate.
+- Avoid collecting profile fields that have no clear product purpose.
+
+### 12.7 Moderation and reports
+
+- Keep moderation tools separate from normal user flows and restrict access through server-side authorization.
+- Show the information needed to make a decision without exposing unnecessary private information.
+- Use clear report status and resolution states only if backed by persisted workflow.
+- Automation may triage or prioritize; it must not silently make high-impact final moderation decisions.
+- If no actual moderation owner or escalation process exists, do not fabricate one. Record the required human action in `HUMAN_INPUT_REQUIRED.md`.
+
+## 13. Cards, feeds, metadata, and tags
+
+- Do not use the same card treatment for every kind of content. Use a feed row, listing card, profile card, or settings row according to the content and task.
+- Feed item hierarchy should normally be: author/context → title → body/summary → tags/metadata → actions.
+- A compact post header may include avatar, name, timestamp, and overflow menu. Do not cram all metadata into one tiny line.
+- Use intrinsic-width tags/chips with sensible horizontal/vertical padding. Long tags must wrap, truncate with a deliberate policy, or scroll within a clearly bounded tag row; they must not clip unpredictably.
+- Distinguish interactive filter chips from informational tags visually and behaviorally.
+- Use consistent separators and alignment across repeated items.
+- Avoid placing prominent “Message” and “Details” buttons on every item if a single tap on the card already opens details. Avoid duplicate affordances that perform the same action.
+- Show counts only when they are real and useful. Do not add fake engagement indicators to make feeds look busy.
+- For user-generated text, respect line breaks where appropriate and handle URLs safely.
+
+## 14. Icons and imagery
+
+- Reuse the icon library already installed and standardize stroke weight, visual size, and alignment.
+- Do not use Unicode emoji as replacements for core navigation, edit, delete, report, search, or account icons.
+- Pair unfamiliar or high-impact icons with text labels.
+- Use avatars with a deterministic fallback (initials or a neutral shape) when no image is available.
+- Handle broken image URLs and upload failures with a useful fallback and retry behavior.
+- Crop images consistently without distorting them. Respect device memory and image dimensions.
+- Do not add stock images merely to fill whitespace.
+- Provide meaningful accessibility labels for non-decorative images; hide purely decorative assets from screen readers.
+
+## 15. Motion and haptics
+
+- Motion is optional and subordinate to task completion.
+- Prefer native transitions already provided by the navigation system.
+- Use short, subtle press feedback; avoid repeated spring effects that make lists feel bouncy or slow.
+- Do not animate layout properties in ways that cause visible reflow or touch-target movement.
+- Respect reduced-motion preferences where supported by the stack.
+- Haptics may be used for a small number of meaningful interactions, but must not be the only signal that something happened.
+- No animated gradient backgrounds, floating glass panels, decorative particle effects, or animation libraries added just for polish.
+
+## 16. Accessibility and inclusive behavior
+
+- Every interactive control must have a meaningful accessible name, role, and state.
+- Use practical touch targets of at least 44 × 44 pt where feasible; smaller visual icons can sit inside larger hit areas.
+- Do not convey errors, selection, verification, or status through color alone.
+- Maintain readable contrast for text, controls, and focus/selected states.
+- Support large text without clipping buttons, cards, labels, or tab navigation.
+- Ensure screen-reader reading order matches the visual and task order.
+- Inputs must expose labels, required state, errors, and help text to assistive technologies.
+- Dialogs and sheets must have clear titles, dismissal behavior, and focus/reading order.
+- Ensure keyboard users can reach and operate relevant controls if the platform/input mode supports it.
+- Avoid flashing, unnecessarily moving elements, and time-limited messages that disappear before they can be read.
+
+## 17. Trustworthy content and copy
+
+- Use concise, specific, human wording. Avoid corporate filler and AI-sounding marketing claims.
+- Prefer action labels that state what happens next.
+- Avoid vague errors such as “Something went wrong” when the app can explain a safe next step.
+- Never claim an action is saved, sent, verified, deleted, reported, or published before the backend confirms success.
+- Explain limitations at the moment they matter: direct UPI arrangements, anonymous-to-peers behavior, curated directory, or unsupported contact actions.
+- Avoid overpromising privacy, moderation response times, institutional affiliation, user authenticity, or marketplace safety.
+- Keep empty-state copy useful and specific, not cute or overly promotional.
+
+## 18. Component and token architecture
+
+- Inspect the current stack before deciding where tokens and components live.
+- Establish a single semantic theme source where practical. Avoid duplicate light/dark definitions scattered across screens.
+- Use semantic names such as `background`, `surface`, `surfacePressed`, `textPrimary`, `textSecondary`, `separator`, `border`, `accent`, `danger`, and `success` rather than names tied to a single screen.
+- Shared components should encapsulate real repeated behavior and visual meaning; do not create abstractions used only once unless they materially improve clarity.
+- Keep components small enough to understand and test, but avoid fragmentation into dozens of trivial wrappers.
+- Respect the existing project’s naming conventions, folder structure, and formatting.
+- Avoid broad refactors that obscure the behavioral change or increase regression risk.
+- Add or modify dependencies only when needed, supported by the installed platform versions, and documented.
+
+## 19. Cross-platform stability rules
+
+- Do not use blur as a surface primitive.
+- Avoid depending on platform-specific alpha compositing, backdrop sampling, or complex shadows for the core visual hierarchy.
+- Prefer opaque semantic backgrounds and hairline borders.
+- Check font rendering, safe-area behavior, status bar contrast, keyboard behavior, modal layering, and bottom navigation on Android.
+- If iOS is supported, check the same core flows there; do not claim parity without checking.
+- Verify the actual installed Expo/React Native version before using APIs or props from newer documentation.
+- Use platform-specific branches only for a demonstrated platform difference, not as a default styling strategy.
+
+## 20. Required design audit and acceptance checklist
+
+The implementation agent must evaluate and record the following rather than merely asserting compliance:
+
+### Visual coherence
+- [ ] One coherent semantic color/token system; no conflicting token sources.
+- [ ] Consistent typography scale, spacing, radii, dividers, and icon style.
+- [ ] No glassmorphism, BlurView, backdrop blur, or transparent bars that depend on content showing through.
+- [ ] Gradients are limited and non-essential.
+- [ ] Content hierarchy is obvious at a glance.
+- [ ] No redundant cards, pills, duplicate actions, fake metrics, or ornamental UI.
+
+### Behavior
+- [ ] Every visible control has a verified action.
+- [ ] Loading, empty, filtered-empty, error, disabled, submitting, and success states are handled where relevant.
+- [ ] Forms preserve user input on recoverable failure.
+- [ ] Duplicate submissions and stale results are handled where relevant.
+- [ ] Navigation, back behavior, and safe areas remain correct.
+
+### Responsive/accessibility
+- [ ] Small-screen layout checked.
+- [ ] Long titles, descriptions, tags, names, and prices checked.
+- [ ] Keyboard and form scrolling checked.
+- [ ] Larger text and screen-reader semantics checked as far as the environment permits.
+- [ ] Contrast and touch targets checked.
+
+### Trust and privacy
+- [ ] Verification indicators reflect real backend state.
+- [ ] Anonymous identity is not exposed to peers through API payloads or UI.
+- [ ] Report/block controls and permissions match actual capabilities.
+- [ ] Marketplace does not imply in-app payments or guarantees.
+- [ ] No false institutional affiliation or fabricated community content.
+
+### Verification and documentation
+- [ ] `DECISIONS.md` records consequential choices and superseded decisions.
+- [ ] `HUMAN_INPUT_REQUIRED.md` is updated based on discoveries and implementation, not left as a generic template.
+- [ ] `UI_PERFECTION_SUMMARY.md` records defects, changed files, evidence, remaining issues, and next actions.
+- [ ] Relevant tests, type checks, and build checks are run and their exact outcomes recorded.
+- [ ] Android behavior is verified on a device/emulator when available; otherwise the limitation is explicit.
+
+## 21. How to use this document
+
+This document is the target visual and interaction system, not a mandate to replace working screens indiscriminately. The agent should:
+
+1. Audit the existing UI against each applicable requirement.
+2. Identify concrete defects and redundancies, prioritizing user-visible and trust/safety issues.
+3. Preserve working behavior and architecture unless there is a clear reason to change it.
+4. Implement shared tokens/components before applying isolated screen polish where that reduces inconsistency.
+5. Test real flows, including failure states—not just screenshots of ideal states.
+6. Update `DECISIONS.md`, `UI_PERFECTION_SUMMARY.md`, and `HUMAN_INPUT_REQUIRED.md` to match what the work actually established.
+7. Distinguish what was verified from what was only reviewed or remains untested.
+
+**The final visual standard:** warm background, reliable surface contrast, restrained emerald accent, strong typography, deliberate spacing, hairline separators, appropriate icons, responsive content, honest feedback, and stable platform behavior. Do not substitute blur, transparency, glow, or decoration for design quality.

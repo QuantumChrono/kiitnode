@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { useThemeColors } from '@/hooks/useThemeColors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 export default function OnboardingScreen() {
   const { updateProfile, profile } = useAuth();
+  const colors = useThemeColors();
+
   const [whatsappNumber, setWhatsappNumber] = useState(profile?.whatsapp_number || '');
   const [campusLocation, setCampusLocation] = useState(profile?.campus_location || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     if (!whatsappNumber.trim() || !campusLocation.trim()) {
-      setError("Please fill out all fields.");
+      setError("Please fill out both fields.");
       return;
     }
 
-    // Basic validation for whatsapp
     const cleanedNumber = whatsappNumber.replace(/[^\d+]/g, '');
-    if (cleanedNumber.length < 10) {
-      setError("Please enter a valid WhatsApp number.");
+    if (cleanedNumber.replace(/\D/g, '').length < 10) {
+      setError("Please enter a valid 10-digit WhatsApp number.");
       return;
     }
 
@@ -28,9 +33,10 @@ export default function OnboardingScreen() {
       setError(null);
       await updateProfile({
         whatsapp_number: cleanedNumber,
-        campus_location: campusLocation.trim()
+        campus_location: campusLocation.trim(),
       });
-      // The _layout will observe the profile change and automatically redirect to tabs
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Navigation is triggered reactively by auth state in _layout.tsx
     } catch (e: any) {
       setError(e.message || "Failed to update profile");
       setIsSubmitting(false);
@@ -38,76 +44,191 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-campus-dark-bg">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View className="flex-1 px-6 justify-center py-10">
-            <Text className="text-3xl font-bold text-campus-primary mb-2">Complete Profile</Text>
-            <Text className="text-slate-400 mb-10 text-base">Wait! We just need two things before you connect with the campus.</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            <Text style={[styles.title, { color: colors.label }]}>Complete Profile</Text>
+            <Text style={[styles.subtitle, { color: colors.secondaryLabel }]}>
+              Two details are needed to verify your campus identity before collaborating.
+            </Text>
 
             {error && (
-              <View className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-                <Text className="text-red-400 text-sm font-medium">{error}</Text>
+              <View style={[styles.errorContainer, { backgroundColor: colors.tintBg, borderColor: colors.red }]}>
+                <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>
               </View>
             )}
 
-            <View className="space-y-6">
+            <View style={styles.form}>
               {/* WhatsApp Field */}
-              <View>
-                <Text className="text-slate-300 font-medium mb-2 text-sm uppercase tracking-wider">WhatsApp Number</Text>
-                <View className="bg-campus-dark-surface border border-slate-700 p-4 rounded-xl flex-row items-center focus:border-campus-primary">
-                  <Text className="text-slate-400 mr-2 font-medium">+91</Text>
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.secondaryLabel }]}>
+                  WhatsApp Number
+                </Text>
+                <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.separator }]}>
+                  <Text style={[styles.countryCode, { color: colors.secondaryLabel }]}>+91</Text>
                   <TextInput
-                    className="flex-1 text-slate-100 text-lg font-medium"
+                    style={[styles.input, { color: colors.label }]}
                     placeholder="98765 43210"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={colors.tertiaryLabel}
                     keyboardType="phone-pad"
-                    value={whatsappNumber.replace('+91', '')}
-                    onChangeText={setWhatsappNumber}
+                    value={whatsappNumber.replace('+91', '').trim()}
+                    onChangeText={(text) => {
+                      setError(null);
+                      setWhatsappNumber(text);
+                    }}
                     editable={!isSubmitting}
                   />
                 </View>
-                <Text className="text-slate-500 text-xs mt-2 ml-1">
-                  Used for direct coordination in Marketplace and Collabs.
+                <Text style={[styles.fieldHint, { color: colors.tertiaryLabel }]}>
+                  Used for direct 1-to-1 coordination in Marketplace and Collabs.
                 </Text>
               </View>
 
               {/* Campus Location Field */}
-              <View className="mt-6">
-                <Text className="text-slate-300 font-medium mb-2 text-sm uppercase tracking-wider">Campus Landmark / Hostel</Text>
-                <View className="bg-campus-dark-surface border border-slate-700 p-4 rounded-xl flex-row items-center focus:border-campus-primary">
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.secondaryLabel }]}>
+                  Campus Landmark / Hostel
+                </Text>
+                <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: colors.separator }]}>
                   <TextInput
-                    className="flex-1 text-slate-100 text-lg font-medium"
+                    style={[styles.input, { color: colors.label }]}
                     placeholder="e.g. Hostel KP-7 or Campus 6"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={colors.tertiaryLabel}
                     value={campusLocation}
-                    onChangeText={setCampusLocation}
+                    onChangeText={(text) => {
+                      setError(null);
+                      setCampusLocation(text);
+                    }}
                     editable={!isSubmitting}
                   />
                 </View>
+                <Text style={[styles.fieldHint, { color: colors.tertiaryLabel }]}>
+                  Helps nearby students identify convenient meetup spots.
+                </Text>
               </View>
             </View>
 
-            <View className="mt-12">
-              <TouchableOpacity
-                className={`w-full py-4 rounded-xl items-center ${isSubmitting ? 'bg-campus-primary/70' : 'bg-campus-primary'}`}
+            {/* Submit Button */}
+            <View style={styles.buttonWrapper}>
+              <Pressable
                 onPress={handleSubmit}
                 disabled={isSubmitting}
+                style={({ pressed }) => [
+                  styles.submitButton,
+                  {
+                    backgroundColor: colors.tint,
+                    opacity: isSubmitting ? 0.7 : pressed ? 0.88 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white text-lg font-bold">Enter Campus Node</Text>
+                  <Text style={styles.submitButtonText}>Enter Campus Node</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
-
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  errorContainer: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  form: {
+    gap: 20,
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    borderCurve: 'continuous',
+    paddingHorizontal: 16,
+    height: 52,
+  },
+  countryCode: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    height: '100%',
+  },
+  fieldHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+    paddingHorizontal: 4,
+  },
+  buttonWrapper: {
+    marginTop: 36,
+  },
+  submitButton: {
+    height: 52,
+    borderRadius: 14,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+});

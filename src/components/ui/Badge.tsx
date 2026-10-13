@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, ViewStyle, StyleSheet } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-type BadgeVariant = "emerald" | "amber" | "violet" | "slate" | "blue";
+type BadgeVariant = "emerald" | "amber" | "violet" | "slate" | "blue" | "cyan" | "indigo";
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -15,13 +15,8 @@ const sizeStyles: Record<string, ViewStyle> = {
   md: { paddingHorizontal: 12, paddingVertical: 4 },
 };
 
-const textSizeStyles: Record<string, string> = {
-  sm: "text-xs",
-  md: "text-sm",
-};
-
 export function Badge({ variant = "slate", size = "md", children }: BadgeProps) {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
 
   const getVariantStyles = () => {
     switch (variant) {
@@ -44,6 +39,16 @@ export function Badge({ variant = "slate", size = "md", children }: BadgeProps) 
         return {
           bg: isDark ? "rgba(10, 132, 255, 0.16)" : "rgba(0, 122, 255, 0.12)",
           text: isDark ? "#0A84FF" : "#007AFF",
+        };
+      case "cyan":
+        return {
+          bg: isDark ? "rgba(100, 210, 255, 0.16)" : "rgba(50, 173, 230, 0.12)",
+          text: isDark ? "#64D2FF" : "#0071A4",
+        };
+      case "indigo":
+        return {
+          bg: isDark ? "rgba(94, 92, 230, 0.16)" : "rgba(88, 86, 214, 0.12)",
+          text: isDark ? "#5E5CE6" : "#5856D6",
         };
       case "slate":
       default:

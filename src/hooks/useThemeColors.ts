@@ -8,13 +8,17 @@ export interface ThemeColors {
   secondaryLabel: string;
   tertiaryLabel: string;
   separator: string;
+  tint: string;
+  tintPressed: string;
+  tintBg: string;
+  success: string;
+  error: string;
+  blue: string;
+  isDark: boolean;
+  // Legacy aliases — kept so existing consumers don't break
   glassBg: string;
   glassBorder: string;
-  tint: string;
-  tintBg: string;
-  blue: string;
   red: string;
-  isDark: boolean;
 }
 
 export function useThemeColors(): ThemeColors {
@@ -28,12 +32,16 @@ export function useThemeColors(): ThemeColors {
     secondaryLabel: colors.secondaryLabel,
     tertiaryLabel: colors.tertiaryLabel,
     separator: colors.separator,
-    glassBg: isDark ? "rgba(18, 18, 20, 0.92)" : "rgba(248, 248, 250, 0.92)",
-    glassBorder: colors.glassBorder,
-    tint: colors.green,
+    tint: colors.tint,
+    tintPressed: colors.tintPressed,
     tintBg: colors.greenTint,
+    success: colors.success,
+    error: colors.error,
     blue: colors.blue,
-    red: "#FF3B30",
     isDark,
+    // Legacy aliases
+    glassBg: isDark ? "rgba(22, 27, 34, 0.92)" : "rgba(255, 255, 255, 0.92)",
+    glassBorder: colors.glassBorder,
+    red: colors.error,
   };
 }

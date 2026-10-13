@@ -15,7 +15,6 @@ configureReanimatedLogger({
 
 function RootLayoutNav() {
   const { session, profile, isLoading } = useAuth();
-  const { isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 

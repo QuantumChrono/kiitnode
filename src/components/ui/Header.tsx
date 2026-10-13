@@ -1,9 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LogOut, Sun, Moon } from "lucide-react-native";
-import { router } from "expo-router";
+import { Sun, Moon } from "lucide-react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -16,13 +14,7 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
   const { toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-  const { signOut, profile } = useAuth();
-  const targetRef = React.useRef<View | null>(null);
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace("/(auth)/login");
-  };
+  const { profile } = useAuth();
 
   return (
     <View style={[
@@ -34,19 +26,11 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
         zIndex: 50,
         paddingTop: insets.top,
         height: insets.top + 48,
-        overflow: "hidden",
+        backgroundColor: colors.bg,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: colors.separator,
       }
     ]}>
-      {/* Glass host */}
-      <View style={[
-        styles.glassHost,
-        {
-          backgroundColor: colors.isDark ? '#1C1C1E' : '#FFFFFF',
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.separator,
-        }
-      ]} />
-
       <View style={styles.content}>
         <View style={styles.leftContainer}>
           <Text style={[styles.title, { color: colors.label }]}>KIIT Node</Text>
@@ -71,9 +55,6 @@ export function Header({ showDevSwitch = false }: HeaderProps) {
 
 const styles = StyleSheet.create({
   container: { position: "absolute" },
-  glassHost: {
-    ...StyleSheet.absoluteFill,
-  },
   content: {
     flex: 1,
     flexDirection: "row",

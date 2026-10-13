@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthContextType } from "@/context/AuthContext";
 import { PostTag } from "@/types/database";
 import * as Haptics from "expo-haptics";
-import * as Linking from "expo-linking";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
@@ -20,15 +19,16 @@ export default function CreateForumModal({ visible, onRequestClose, onPostCreate
   const auth = useAuth() as AuthContextType;
   const insets = useSafeAreaInsets();
 
-  if (!auth.profile) return null;
-
-  const profile = auth.profile;
-
+  // All hooks must be called before any conditional returns
   const [discussionTopic, setDiscussionTopic] = useState("");
   const [detailsContent, setDetailsContent] = useState("");
   const [category, setCategory] = useState<'Academic' | 'Events' | 'Campus'>('Academic');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+
+  if (!auth.profile) return null;
+
+  const profile = auth.profile;
 
   const categoryOptions = [
     { label: 'Academic', value: 'Academic' },

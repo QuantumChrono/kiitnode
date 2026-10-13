@@ -1,16 +1,10 @@
 import { Tabs } from "expo-router";
 import { Users, ShoppingBag, MessageSquare, Compass, User } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { Platform, View, StyleSheet } from "react-native";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import AppleFloatingTabBar from "@/components/ui/AppleFloatingTabBar";
+import { AppleFloatingTabBar } from "@/components/ui/AppleFloatingTabBar";
 
 export default function TabsLayout() {
-  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
-
-  const bottomInset = Math.max(insets.bottom + 8, 16);
 
   return (
     <Tabs

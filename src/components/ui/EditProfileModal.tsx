@@ -18,13 +18,15 @@ export default function EditProfileModal({ visible, onRequestClose }: EditProfil
   const auth = useAuth() as AuthContextType;
   const insets = useSafeAreaInsets();
 
+  // All hooks must be called before any conditional returns
+  const [fullName, setFullName] = useState(auth.profile?.full_name ?? "");
+  const [whatsappNumber, setWhatsAppNumber] = useState(auth.profile?.whatsapp_number ?? "");
+  const [campusLocation, setCampusLocation] = useState(auth.profile?.campus_location ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+
   if (!auth.profile) return null;
 
   const profile = auth.profile;
-  const [fullName, setFullName] = useState(profile.full_name ?? "");
-  const [whatsappNumber, setWhatsAppNumber] = useState(profile.whatsapp_number ?? "");
-  const [campusLocation, setCampusLocation] = useState(profile.campus_location ?? "");
-  const [isSaving, setIsSaving] = useState(false);
 
   const options = ["Hostel 6", "Hostel KP-6", "Hostel KP-7", "Hostel KP-15", "Campus 3", "Campus 6", "Campus 15", "Central Library"];
 

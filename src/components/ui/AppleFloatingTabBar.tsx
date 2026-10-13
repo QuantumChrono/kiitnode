@@ -1,31 +1,25 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Platform } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 export default function AppleFloatingTabBar({ state, descriptors, navigation, insets }: any) {
   const colors = useThemeColors();
-  const targetRef = React.useRef<View | null>(null);
 
   return (
     <View style={[
       styles.container,
       {
-        bottom: insets?.bottom != null ? Math.max(insets.bottom + 8, 16) : 20,
+        bottom: insets?.bottom != null ? Math.max(insets.bottom + 8, 16) : 16,
         zIndex: 50,
+        backgroundColor: colors.card,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.separator,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: colors.isDark ? 0.4 : 0.08,
+        shadowRadius: 16,
       }
     ]}>
-      {/* Glass host replaced with solid background */}
-      <View style={[
-        styles.glassHost,
-        {
-          backgroundColor: colors.isDark ? '#1C1C1E' : '#FFFFFF',
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.separator,
-        }
-      ]} />
-
       {/* Tab content */}
       <View style={styles.tabContent}>
         {state.routes.map((route: any, index: number) => {
@@ -66,10 +60,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     borderCurve: "continuous" as const,
     overflow: "hidden",
-    backgroundColor: 'transparent', // Host must be transparent (now overridden by glassHost)
-  },
-  glassHost: {
-    ...StyleSheet.absoluteFill,
   },
   tabContent: {
     flex: 1,

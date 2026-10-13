@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { Card } from '@/components/ui/Card';
 import { MessageCircle } from 'lucide-react-native';
@@ -10,6 +10,8 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import PostDetailModal from '@/components/modals/PostDetailModal';
 import CreateMarketModal from '@/components/modals/CreateMarketModal';
+import { supabase } from '@/lib/supabase';
+import { PublicPost } from '@/types/database';
 
 interface Listing {
   id: string;
@@ -22,40 +24,78 @@ interface Listing {
   content?: string;
 }
 
-const SEED_LISTINGS: Listing[] = [
-  {
-    id: '1',
-    title: 'TI-84 Calculator',
-    price: '₹2500',
-    location: 'Campus 6 Food Court',
-    type: 'selling',
-    author: 'Ravi Kumar',
-    whatsapp: '919999999991',
-    content: 'Perfect condition calculator, used for one semester. Includes charging cable.'
-  },
-  {
-    id: '2',
-    title: 'Second-hand cycle',
-    price: '₹3000',
-    location: 'Hostel KP-7 Gate',
-    type: 'buying',
-    author: 'Sneha Mohanty',
-    whatsapp: '919999999992',
-    content: 'Looking for a cycle in good condition for daily commute to campus.'
-  },
-];
-
 export default function MarketScreen() {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const [selectedPost, setSelectedPost] = useState<Listing | null>(null);
-  const [seedListings, setSeedListings] = useState<Listing[]>(SEED_LISTINGS);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMarketListings = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('posts_public')
+        .select('*')
+        .eq('tag', 'MARKET')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      const transformedListings: Listing[] = (data || []).map((dbPost: PublicPost) => {
+        const fullText = `${dbPost.title} ${dbPost.content || ''}`;
+        const priceMatch = fullText.match(/(?:₹|Rs\.?)\s*[\d,]+(?:\/(?:mo|month))?/i);
+        const lowerText = fullText.toLowerCase();
+        const type: 'selling' | 'buying' | 'renting' =
+          lowerText.includes('rent') ? 'renting' :
+          (lowerText.includes('buy') || lowerText.includes('looking for') || lowerText.includes('wanted')) ? 'buying' :
+          'selling';
+
+        return {
+          id: dbPost.id,
+          title: dbPost.title,
+          price: priceMatch ? priceMatch[0].trim() : '₹ Negotiable',
+          location: dbPost.location_tag || 'Campus Location',
+          type,
+          whatsapp: dbPost.whatsapp_number || undefined,
+          author: dbPost.full_name || 'Anonymous',
+          content: dbPost.content
+        };
+      });
+
+      setListings(transformedListings);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching market listings:', err);
+      setError('Failed to load listings');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMarketListings();
+  }, [fetchMarketListings]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchMarketListings();
+  };
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setError(null);
+    fetchMarketListings();
+  };
 
   const handleWhatsApp = (phone: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const cleanPhone = phone.replace(/\D/g, '');
-    Linking.openURL(`whatsapp://send?phone=${cleanPhone}`);
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    Linking.openURL(`whatsapp://send?phone=91${cleanPhone}`);
   };
 
   return (
@@ -69,11 +109,36 @@ export default function MarketScreen() {
           paddingHorizontal: 16,
           gap: 16
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.tint}
+            colors={[colors.tint]}
+          />
+        }
       >
         <Text style={[styles.largeTitle, { color: colors.label, marginTop: 8, marginBottom: 0 }]}>Market</Text>
 
-        <View style={styles.listingsContainer}>
-          {seedListings.map((listing) => (
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.tint} />
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Text style={[styles.errorText, { color: colors.secondaryLabel }]}>{error}</Text>
+            <Pressable onPress={handleRetry} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
+              <Text style={[styles.retryButtonText, { color: colors.card }]}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : listings.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={[styles.emptyText, { color: colors.secondaryLabel }]}>No listings yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.tertiaryLabel }]}>Be the first to post an item</Text>
+          </View>
+        ) : (
+          <View style={styles.listingsContainer}>
+            {listings.map((listing) => (
             <Pressable
               key={listing.id}
               onPress={() => {
@@ -148,22 +213,15 @@ export default function MarketScreen() {
             </Pressable>
           ))}
         </View>
+        )}
       </ScrollView>
 
       <CreateMarketModal
         visible={isCreateModalVisible}
         onRequestClose={() => setIsCreateModalVisible(false)}
-        onPostCreated={(newPost) => {
-          const newListing: Listing = {
-            id: newPost.id,
-            title: newPost.title,
-            price: `₹${newPost.content}`,
-            location: newPost.location_tag || 'Campus Location',
-            type: newPost.content.toLowerCase().includes('/mo') ? 'renting' : 'selling',
-            whatsapp: '919999999999'
-          };
-          setSeedListings([newListing, ...seedListings]);
+        onPostCreated={() => {
           setIsCreateModalVisible(false);
+          fetchMarketListings();
         }}
       />
 
@@ -212,4 +270,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  centerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 15,
+  }
 });

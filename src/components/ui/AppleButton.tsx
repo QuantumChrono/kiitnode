@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useThemeColors } from '@/hooks/useThemeColors';
 
 export interface AppleButtonProps {

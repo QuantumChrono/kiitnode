@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Profile } from "@/types/database";
@@ -78,6 +78,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [domainError, setDomainError] = useState<string | null>(null);
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.warn('Profile not found for user, possibly rejected by trigger');
+        } else {
+          console.error("Error fetching profile:", error);
+        }
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -122,31 +147,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.warn('Profile not found for user, possibly rejected by trigger');
-        } else {
-          console.error("Error fetching profile:", error);
-        }
-        setProfile(null);
-      } else {
-        setProfile(data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const signInWithGoogle = async () => {
     try {

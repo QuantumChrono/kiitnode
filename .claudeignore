@@ -1,0 +1,5 @@
+
+readonly/**/*.js
+readonly/**/*.jsx
+readonly/**/*.tsx
+readonly/**/*.ts

@@ -1,9 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, TouchableWithoutFeedback, ScrollView } from 'react-native';
-import { MapPin as MapPinIcon, MessageCircle as MessageCircleIcon } from 'lucide-react-native';
+import { View, Text, StyleSheet, Pressable, Modal, TouchableWithoutFeedback, ScrollView, Alert } from 'react-native';
+import { MapPin as MapPinIcon, MessageCircle as MessageCircleIcon, Flag } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
+import { supabase } from '@/lib/supabase';
+import { ReportCategory } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
@@ -31,9 +34,70 @@ interface PostDetailModalProps {
 export default function PostDetailModal({ post, onClose }: PostDetailModalProps) {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const { profile } = useAuth();
 
   const getAuthorName = () => post.author && post.author.trim() !== '' ? post.author : 'Anonymous';
   const getLocation = () => post.campus || post.location || 'KIIT Campus';
+
+  const submitReport = async (category: ReportCategory, reason: string) => {
+    if (!profile?.id) {
+      Alert.alert('Sign In Required', 'Please sign in to report posts.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('reports').insert({
+        post_id: post.id,
+        reporter_id: profile.id,
+        category,
+        reason,
+      } as any);
+
+      if (error) {
+        if (error.code === '23505' || error.message?.includes('duplicate key')) {
+          Alert.alert(
+            'Already Reported',
+            'You have already reported this post. Our moderation queue is reviewing it.'
+          );
+        } else {
+          Alert.alert('Report Notice', 'Could not submit report at this time. Please try again.');
+        }
+        return;
+      }
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Report Received',
+        'Thank you for helping keep KIIT Node safe. Your report has been submitted to the moderation queue.'
+      );
+    } catch (err) {
+      console.error('Report submission failed:', err);
+    }
+  };
+
+  const handleReportPost = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Report Post',
+      'Select a reason for reporting this post to campus moderators:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Spam or Advertising',
+          onPress: () => submitReport('SPAM', 'Spam or commercial promotion'),
+        },
+        {
+          text: 'Inappropriate Content',
+          onPress: () => submitReport('INAPPROPRIATE', 'Inappropriate or offensive content'),
+        },
+        {
+          text: 'Threat or Safety Concern',
+          style: 'destructive',
+          onPress: () => submitReport('THREAT_SAFETY', 'Threat, safety hazard, or harassment'),
+        },
+      ]
+    );
+  };
 
   const openWhatsApp = () => {
     if (post.whatsapp) {
@@ -73,16 +137,33 @@ export default function PostDetailModal({ post, onClose }: PostDetailModalProps)
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
             <View style={styles.contentWrapper}>
-              {/* Thread Author line */}
+              {/* Thread Author line with Report button */}
               <View style={styles.threadHeaderInfo}>
-                <Avatar name={getAuthorName()} size={36} />
-                <View style={styles.threadHeaderMeta}>
-                  <Text style={[styles.threadAuthorName, { color: colors.label }]}>{getAuthorName()}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MapPinIcon size={12} color={colors.secondaryLabel} />
-                    <Text style={[styles.threadLocation, { color: colors.secondaryLabel }]}>{getLocation()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <Avatar name={getAuthorName()} size={36} />
+                  <View style={styles.threadHeaderMeta}>
+                    <Text style={[styles.threadAuthorName, { color: colors.label }]}>{getAuthorName()}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <MapPinIcon size={12} color={colors.secondaryLabel} />
+                      <Text style={[styles.threadLocation, { color: colors.secondaryLabel }]}>{getLocation()}</Text>
+                    </View>
                   </View>
                 </View>
+
+                {/* Report post */}
+                <Pressable
+                  onPress={handleReportPost}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    {
+                      opacity: pressed ? 0.6 : 1,
+                      padding: 6,
+                      borderRadius: 8,
+                    },
+                  ]}
+                >
+                  <Flag size={16} color={colors.secondaryLabel} />
+                </Pressable>
               </View>
 
               {/* Title */}
